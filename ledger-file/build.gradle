@@ -1,0 +1,6 @@
+group 'org.beyene.ledger'
+version '1.0-SNAPSHOT'
+
+dependencies {
+    compile project(':ledger-api')
+}

@@ -2,3 +2,4 @@ rootProject.name = 'ledger'
 
 include 'ledger-api'
 include 'ledger-iota'
+include 'ledger-file'

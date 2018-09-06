@@ -2,13 +2,13 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'eclipse'
 
-	sourceCompatibility = '1.8'
+    sourceCompatibility = 1.8
 
     repositories {
         mavenCentral()
     }
 
     dependencies {
-    	testCompile 'junit:junit:4.12'
-	}
+        testCompile 'junit:junit:4.12'
+    }
 }

@@ -16,6 +16,7 @@
     <modules>
         <module>ledger-api</module>
         <module>ledger-iota</module>
+        <module>ledger-file</module>
     </modules>
 
     <build>
