@@ -44,7 +44,6 @@ public class MapperTest {
         Assert.assertThat(numbersSource, is(numbers));
     }
 
-
     private static class StringIntegerMapper implements Mapper<String, Integer> {
 
         @Override
