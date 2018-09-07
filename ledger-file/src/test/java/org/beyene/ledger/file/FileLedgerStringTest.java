@@ -4,10 +4,7 @@ import org.beyene.ledger.api.Data;
 import org.beyene.ledger.api.Ledger;
 import org.beyene.ledger.api.Mapper;
 import org.beyene.ledger.api.Transaction;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -22,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.hasItems;
@@ -32,9 +30,11 @@ public class FileLedgerStringTest {
     private Ledger<Message, String> ledger;
     private Path txs;
 
+    private AtomicInteger folderIndex = new AtomicInteger(0);
+
     @Before
     public void setUp() throws Exception {
-        txs = Paths.get(System.getProperty("user.dir"), "txs");
+        txs = Paths.get(System.getProperty("user.dir"), "txs-" + folderIndex.getAndIncrement());
         Files.createDirectories(txs);
 
         JAXBContext context = JAXBContext.newInstance(Message.class);
@@ -56,19 +56,34 @@ public class FileLedgerStringTest {
     }
 
     @Test
-    public void testAddTransaction() throws Exception {
-        Message message = new Message().setCommand(Command.APPROVE).setRequest("AP007");
+    public void testGetAndGetSingle() throws Exception {
+        Message message = new Message().setCommand(Command.APPROVE).setRequest("APP007");
         ledger.addTransaction(message);
-    }
 
-    @Test
-    public void testGetTransactions() throws Exception {
-        Message message = new Message().setCommand(Command.APPROVE).setRequest("AP007");
-        ledger.addTransaction(message);
-        List<Message> messages = ledger.getTransactions().stream().map(Transaction::getObject).collect(Collectors.toList());
+        List<Message> messages = ledger.getTransactions()
+                .stream()
+                .map(Transaction::getObject)
+                .collect(Collectors.toList());
 
         Assert.assertThat(messages.size(), is(1));
         Assert.assertThat(messages, hasItems(message));
+    }
+
+    @Test
+    public void testGetAndGetMulti() throws Exception {
+        Message messageApprove = new Message().setCommand(Command.APPROVE).setRequest("APP007");
+        ledger.addTransaction(messageApprove);
+        Message messageDisapprove = new Message().setCommand(Command.DISAPPROVE).setRequest("DAP007");
+        ledger.addTransaction(messageDisapprove);
+
+        List<Message> messages = ledger.getTransactions()
+                .stream()
+                .map(Transaction::getObject)
+                .collect(Collectors.toList());
+
+        Assert.assertThat(messages.size(), is(2));
+        Assert.assertThat(messages, hasItems(messageApprove));
+        Assert.assertThat(messages, hasItems(messageDisapprove));
     }
 
     private static class MessageMapper implements Mapper<Message, String> {

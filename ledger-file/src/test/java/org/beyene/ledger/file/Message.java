@@ -1,12 +1,6 @@
 package org.beyene.ledger.file;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
-import javax.xml.transform.stream.StreamSource;
-import java.io.StringReader;
-import java.io.StringWriter;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(propOrder = {"command", "request"})

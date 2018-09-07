@@ -8,11 +8,13 @@ import org.beyene.ledger.api.Transaction;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class FileLedger<M, D> implements Ledger<M, D> {
@@ -20,11 +22,34 @@ public class FileLedger<M, D> implements Ledger<M, D> {
     private final Mapper<M, D> mapper;
     private final DataRepresentation<D> dataRepresentation;
     private final Path directory;
+    private final AtomicInteger counter;
 
     public FileLedger(Mapper<M, D> mapper, DataRepresentation<D> dataRepresentation, Path directory) {
         this.mapper = mapper;
         this.dataRepresentation = dataRepresentation;
         this.directory = directory;
+        this.counter = new AtomicInteger(determineMaxCounter());
+    }
+
+    private int determineMaxCounter() {
+        Optional<Integer> max;
+
+        try {
+            max = Files.list(directory)
+                    .map(Path::toFile)
+                    .filter(File::isFile)
+                    .map(File::getName)
+                    .map(Integer::parseInt)
+                    .max(Comparator.naturalOrder());
+
+            if (!max.isPresent())
+                max = Optional.of(0);
+
+        } catch (IOException e) {
+            max = Optional.of(0);
+        }
+
+        return max.get();
     }
 
     @Override
@@ -38,32 +63,18 @@ public class FileLedger<M, D> implements Ledger<M, D> {
     }
 
     private Path createFile() {
-        Optional<Integer> max;
-        try {
-            max = Files.list(directory)
-                    .map(Path::toFile)
-                    .filter(File::isFile)
-                    .map(File::getName)
-                    .map(Integer::parseInt)
-                    .max(Comparator.naturalOrder());
+        Path path = Paths.get(directory.toString(), Objects.toString(counter.getAndIncrement()));
 
-            if (!max.isPresent())
-                max = Optional.of(0);
-
-        } catch (IOException e) {
-            throw new IllegalStateException("Error reading files", e);
-        }
-
-        if (!max.isPresent())
-            throw new IllegalStateException("Store for transaction could not be determined");
-
-        Path path = Paths.get(directory.toString(), Objects.toString(max.get()));
-
-        try {
-            Files.createDirectories(path.getParent());
-            Files.createFile(path);
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not create tx file", e);
+        while (true) {
+            try {
+                Files.createDirectories(path.getParent());
+                Files.createFile(path);
+                break;
+            } catch (FileAlreadyExistsException e) {
+                counter.incrementAndGet();
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not create tx file", e);
+            }
         }
 
         return path;
