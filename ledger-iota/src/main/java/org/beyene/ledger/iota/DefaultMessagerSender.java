@@ -10,10 +10,12 @@ import org.beyene.ledger.api.Transaction;
 import org.beyene.ledger.iota.util.Iota;
 
 import javax.xml.bind.DatatypeConverter;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 class DefaultMessagerSender<M, D> implements MessageSender<M> {
@@ -24,16 +26,71 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
     private final Format<D> format;
     private final Mapper<M, D> mapper;
 
+    private final String address;
+    private final boolean useConfiguredAddress;
+
+    private final int depth;
+    private final int minWeightMagnitude;
+
     public DefaultMessagerSender(Builder builder) {
         this.api = builder.api;
         this.format = builder.format;
         this.mapper = builder.mapper;
+        this.address = builder.address;
+        this.useConfiguredAddress = builder.useConfiguredAddress;
+        this.depth = builder.depth;
+        this.minWeightMagnitude = builder.minWeightMagnitude;
     }
 
     @Override
-    public Transaction<M> addTransaction(M message) {
+    public Transaction<M> addTransaction(Transaction<M> transaction) throws IOException {
+        M message = transaction.getObject();
         D serialized = mapper.serialize(message);
+        String messageTrytes = toTrytes(serialized);
+        List<String> signatureFragments = fragmentData(messageTrytes);
 
+        Instant timestamp = Instant.now();
+        String[] txTrytes = createTransactionTrytes(signatureFragments, transaction, timestamp);
+
+        try {
+            api.sendTrytes(txTrytes, depth, minWeightMagnitude);
+        } catch (ArgumentException e) {
+            LOGGER.log(Level.INFO, e.toString(), e);
+            throw new IOException("Sending transaction failed", e);
+        }
+
+        return new MessageTransaction<>(address, timestamp, transaction.getTag(), message);
+    }
+
+    private String[] createTransactionTrytes(List<String> signatureFragments, Transaction<M> transaction, Instant timestamp) {
+        String address = transaction.getIdentifier();
+        if (useConfiguredAddress)
+            address = this.address;
+        if (address == null || address.isEmpty())
+            address = StringUtils.rightPad("", Constants.ADDRESS_LENGTH_WITHOUT_CHECKSUM, '9');
+
+        String tagRaw = transaction.getTag();
+        String tag = StringUtils.rightPad(tagRaw, Constants.TAG_LENGTH, '9');
+
+        long value = 0;
+        int signatureMessageLength = signatureFragments.size();
+        Bundle bundle = new Bundle();
+        bundle.addEntry(signatureMessageLength, address, value, tag, 0);
+        bundle.addTrytes(signatureFragments);
+
+        bundle.getTransactions().stream().forEach(this::copyTag);
+
+
+        bundle.getTransactions().stream().forEach(tx -> fixTimestamps(tx, timestamp.toEpochMilli()));
+        bundle.finalize(null);
+
+        List<jota.model.Transaction> transactions = bundle.getTransactions();
+        Collections.reverse(transactions);
+        String[] txTrytes = transactions.stream().map(jota.model.Transaction::toTrytes).toArray(String[]::new);
+        return txTrytes;
+    }
+
+    private String toTrytes(D serialized) {
         String trytes;
         if (String.class.isAssignableFrom(format.getType())) {
             String string = String.class.cast(serialized);
@@ -50,51 +107,7 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
             throw new IllegalStateException("Unsupported data type: " + format.getType().getName());
         }
 
-        List<String> signatureFragments = fragmentData(trytes);
-
-        int signatureMessageLength = signatureFragments.size();
-        // TODO read address that should be used here
-        String address = StringUtils.rightPad("", Constants.ADDRESS_LENGTH_WITHOUT_CHECKSUM, '9');
-        long value = 0;
-
-        // TODO read tag from parameter
-        // wrap message object in Transaction
-        String tagRaw = "BEYENE";
-        String tag = StringUtils.rightPad(tagRaw, Constants.TAG_LENGTH, '9');
-
-        Bundle bundle = new Bundle();
-        bundle.addEntry(signatureMessageLength, address, value, tag, 0);
-        bundle.addTrytes(signatureFragments);
-
-        bundle.getTransactions().stream().forEach(this::copyTag);
-
-        // TODO same timestamp for all transactions of bundle
-        Instant timestamp = Instant.now();
-        bundle.getTransactions().stream().forEach(tx -> fixTimestamps(tx, timestamp.toEpochMilli()));
-        bundle.finalize(null);
-
-        // TODO maybe read from builder
-        int depth = 5;
-
-        List<jota.model.Transaction> transactions = bundle.getTransactions();
-        Collections.reverse(transactions);
-        String[] txTrytes = transactions.stream().map(jota.model.Transaction::toTrytes).toArray(String[]::new);
-
-        // TODO read from builder
-        int minWeightMagnitude = 13;
-
-        List<jota.model.Transaction> sentTxs = null;
-        try {
-            sentTxs = api.sendTrytes(txTrytes, depth, minWeightMagnitude);
-        } catch (ArgumentException e) {
-            e.printStackTrace();
-            // TODO throw some exception
-        }
-
-        //Collections.reverse(sentTxs);
-        //System.out.println(sentTxs);
-
-        return new MessageTransaction<>(address, timestamp, tag, message);
+        return trytes;
     }
 
     private List<String> fragmentData(String trytes) {
@@ -125,6 +138,10 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
         private Iota api;
         private Mapper<M, D> mapper;
         private Format<D> format;
+        private String address;
+        private boolean useConfiguredAddress;
+        private int depth;
+        private int minWeightMagnitude;
 
         public Builder setApi(Iota api) {
             this.api = api;
@@ -138,6 +155,26 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
 
         public Builder setMapper(Mapper<M, D> mapper) {
             this.mapper = mapper;
+            return this;
+        }
+
+        public Builder setAddress(String address) {
+            this.address = address;
+            return this;
+        }
+
+        public Builder setUseConfiguredAddress(boolean useConfiguredAddress) {
+            this.useConfiguredAddress = useConfiguredAddress;
+            return this;
+        }
+
+        public Builder setTipAnalysisDepth(int depth) {
+            this.depth = depth;
+            return this;
+        }
+
+        public Builder setMinWeightMagnitude(int minWeightMagnitude) {
+            this.minWeightMagnitude = minWeightMagnitude;
             return this;
         }
 

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class IotaLedger<M, D> implements Ledger<M, D> {
 
@@ -29,6 +30,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
 
     private final Instant pushThreshold = Instant.now();
     private final List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
+    private final List<Transaction<M>> messagesBeforePushThreshold;
 
     public IotaLedger(Builder builder) {
         this.api = builder.api;
@@ -45,6 +47,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
         this.transactionQueue = new LinkedBlockingQueue<>();
         this.scheduledExecutor = Executors.newScheduledThreadPool(poolSize);
         this.txsBeforePushThreshold = new CopyOnWriteArrayList<>();
+        this.messagesBeforePushThreshold = new CopyOnWriteArrayList<>();
 
         // refactor out?
         TransactionPoller txProducer = new TransactionPoller.Builder()
@@ -63,6 +66,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
                 .setMessageQueue(messageQueue)
                 .setTransactionQueue(transactionQueue)
                 .setTransactionsBeforePushThreshold(txsBeforePushThreshold)
+                .setTransactionBeforePushThresholdConsumer(messagesBeforePushThreshold::addAll)
                 .setFormat(format)
                 .setMapper(mapper)
                 .build();
@@ -83,14 +87,17 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
     }
 
     @Override
-    public Transaction<M> addTransaction(M message) {
-        return sender.addTransaction(message);
+    public Transaction<M> addTransaction(Transaction<M> transaction) throws IOException {
+        return sender.addTransaction(transaction);
     }
 
-    // TODO make old transactions available
     @Override
     public List<Transaction<M>> getTransactions(Instant since, Instant to) {
-        return null;
+        return messagesBeforePushThreshold
+                .stream()
+                .filter(tx -> tx.getTimestamp().isAfter(since))
+                .filter(tx -> tx.getTimestamp().isBefore(to))
+                .collect(Collectors.toList());
     }
 
     @Override

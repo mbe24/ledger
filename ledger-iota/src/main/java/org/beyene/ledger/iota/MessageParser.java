@@ -27,7 +27,7 @@ public class MessageParser<M, D> implements Runnable {
     private final BlockingQueue<Transaction<M>> messageQueue;
     private final BlockingQueue<Transaction<jota.model.Transaction>> transactionQueue;
     private final List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
-    private final Consumer<Collection<Transaction<M>>> oldTxsConsumer;
+    private final Consumer<Collection<? extends Transaction<M>>>  oldTxsConsumer;
 
     // use set to avoid duplicates
     private final KeySetView<Transaction<jota.model.Transaction>, Boolean> inWork;
@@ -74,7 +74,8 @@ public class MessageParser<M, D> implements Runnable {
         handleMessages(batch, messageQueue::addAll);
     }
 
-    private void handleMessages(List<Transaction<jota.model.Transaction>> batch, Consumer<Collection<Transaction<M>>> messageConsumer) {
+    private void handleMessages(List<Transaction<jota.model.Transaction>> batch,
+                                Consumer<Collection<? extends Transaction<M>>>  messageConsumer) {
         Map<String, List<Transaction<jota.model.Transaction>>> bundles = groupByBundles(batch);
         List<Transaction<String>> messagesRaw = defragmentRawMessages(bundles);
         aggregateUnprocessedTransactions(bundles);
@@ -89,7 +90,8 @@ public class MessageParser<M, D> implements Runnable {
         inWork.addAll(unprocessed);
     }
 
-    private void processMessages(List<Transaction<String>> messagesRaw, Consumer<Collection<Transaction<M>>> messageConsumer) {
+    private void processMessages(List<Transaction<String>> messagesRaw,
+                                 Consumer<Collection<? extends Transaction<M>>>  messageConsumer) {
         List<Transaction<M>> messages = new ArrayList<>(messagesRaw.size());
 
         for (Transaction<String> tx : messagesRaw) {
@@ -215,7 +217,7 @@ public class MessageParser<M, D> implements Runnable {
         private BlockingQueue<Transaction<M>> messageQueue;
         private BlockingQueue<Transaction<jota.model.Transaction>> transactionQueue;
         private List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
-        private Consumer<Collection<Transaction<M>>> oldTxsConsumer;
+        private Consumer<Collection<? extends Transaction<M>>>  oldTxsConsumer;
         private Format<D> format;
         private Mapper<M, D> mapper;
 
@@ -235,7 +237,7 @@ public class MessageParser<M, D> implements Runnable {
         }
 
         public Builder setTransactionBeforePushThresholdConsumer(
-                Consumer<Collection<Transaction<M>>> oldTxsConsumer) {
+                Consumer<Collection<? extends Transaction<M>>> oldTxsConsumer) {
             this.oldTxsConsumer = oldTxsConsumer;
             return this;
         }

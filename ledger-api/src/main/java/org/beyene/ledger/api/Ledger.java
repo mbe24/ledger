@@ -14,12 +14,11 @@ public interface Ledger<M, D> extends AutoCloseable {
 
     // is it necessary to return the meta data here?
     // another possibility is to use completion handler
-    Transaction<M> addTransaction(M message);
+    Transaction<M> addTransaction(Transaction<M> transaction) throws IOException;
 
     /**
-     *
      * @param since has to be greater or equal to Instant.MIN
-     * @param to has to be smaller or equal to Instant.MAX
+     * @param to    has to be smaller or equal to Instant.MAX
      * @return
      */
     List<Transaction<M>> getTransactions(Instant since, Instant to);

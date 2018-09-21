@@ -1,5 +1,7 @@
 package org.beyene.ledger.iota;
 
+import cfb.pearldiver.PearlDiverLocalPoW;
+import jota.IotaLocalPoW;
 import org.beyene.ledger.api.*;
 import org.beyene.ledger.iota.util.Iota;
 import org.beyene.ledger.iota.util.IotaAPIExtended;
@@ -36,10 +38,12 @@ public class IotaLedgerProvider implements LedgerProvider {
 
         checkConfiguration(properties);
 
+        IotaLocalPoW localPoW = new PearlDiverLocalPoW();
         IotaAPIExtended.Builder apiBuilder = new IotaAPIExtended.Builder();
         apiBuilder.protocol(Objects.toString(properties.get("iota.node.protocol")))
                 .host(Objects.toString(properties.get("iota.node.host")))
-                .port(Objects.toString(properties.get("iota.node.port")));
+                .port(Objects.toString(properties.get("iota.node.port")))
+                .localPoW(localPoW);
 
         boolean sslDisabled = Boolean.valueOf(Objects.toString(properties.get("ssl.check.disable")));
         if (sslDisabled) {
@@ -59,6 +63,8 @@ public class IotaLedgerProvider implements LedgerProvider {
                 .setApi(api)
                 .setFormat(format)
                 .setMapper(mapper)
+                .setTipAnalysisDepth(3)
+                .setMinWeightMagnitude(13)
                 .build();
 
         return builder
@@ -67,6 +73,8 @@ public class IotaLedgerProvider implements LedgerProvider {
                 .setFormat(format)
                 .setMapper(mapper)
                 .setListeners(listeners)
+                .setListenerThreads(2)
+                .setMinWeightMagnitude(13)
                 .build();
     }
 

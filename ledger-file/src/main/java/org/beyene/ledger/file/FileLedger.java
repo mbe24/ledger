@@ -55,9 +55,10 @@ public class FileLedger<M, D> implements Ledger<M, D> {
     }
 
     @Override
-    public Transaction<M> addTransaction(final M message) {
+    public Transaction<M> addTransaction(Transaction<M> transaction) {
         Path path = createFile();
 
+        M message = transaction.getObject();
         D serialized = mapper.serialize(message);
         write(path, serialized);
 
