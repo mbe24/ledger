@@ -17,6 +17,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,7 +61,7 @@ public class FileLedgerStringTest {
         Message message = new Message().setCommand(Command.APPROVE).setRequest("APP007");
         ledger.addTransaction(message);
 
-        List<Message> messages = ledger.getTransactions()
+        List<Message> messages = ledger.getTransactions(Instant.MIN, Instant.MAX)
                 .stream()
                 .map(Transaction::getObject)
                 .collect(Collectors.toList());
@@ -76,7 +77,7 @@ public class FileLedgerStringTest {
         Message messageDisapprove = new Message().setCommand(Command.DISAPPROVE).setRequest("DAP007");
         ledger.addTransaction(messageDisapprove);
 
-        List<Message> messages = ledger.getTransactions()
+        List<Message> messages = ledger.getTransactions(Instant.MIN, Instant.MAX)
                 .stream()
                 .map(Transaction::getObject)
                 .collect(Collectors.toList());

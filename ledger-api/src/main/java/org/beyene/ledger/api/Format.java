@@ -1,6 +1,6 @@
 package org.beyene.ledger.api;
 
-public interface DataRepresentation<T> {
+public interface Format<T> {
 
     Class<T> getType();
 }

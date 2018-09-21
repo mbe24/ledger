@@ -1,9 +1,6 @@
 package org.beyene.ledger.file;
 
-import org.beyene.ledger.api.DataRepresentation;
-import org.beyene.ledger.api.Ledger;
-import org.beyene.ledger.api.Mapper;
-import org.beyene.ledger.api.Transaction;
+import org.beyene.ledger.api.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,21 +9,25 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class FileLedger<M, D> implements Ledger<M, D> {
 
+    private static final Logger LOGGER = Logger.getLogger(FileLedger.class.getName());
+
     private final Mapper<M, D> mapper;
-    private final DataRepresentation<D> dataRepresentation;
+    private final Format<D> format;
     private final Path directory;
     private final AtomicInteger counter;
 
-    public FileLedger(Mapper<M, D> mapper, DataRepresentation<D> dataRepresentation, Path directory) {
+    public FileLedger(Mapper<M, D> mapper, Format<D> format, Path directory) {
         this.mapper = mapper;
-        this.dataRepresentation = dataRepresentation;
+        this.format = format;
         this.directory = directory;
         this.counter = new AtomicInteger(determineMaxCounter());
     }
@@ -46,6 +47,7 @@ public class FileLedger<M, D> implements Ledger<M, D> {
                 max = Optional.of(0);
 
         } catch (IOException e) {
+            LOGGER.log(Level.INFO, e.toString(), e);
             max = Optional.of(0);
         }
 
@@ -59,7 +61,13 @@ public class FileLedger<M, D> implements Ledger<M, D> {
         D serialized = mapper.serialize(message);
         write(path, serialized);
 
-        return () -> message;
+        return fromMessage(message);
+    }
+
+    private Transaction<M> fromMessage(M message) {
+        SimpleTransaction<M> tx = new SimpleTransaction<>();
+        tx.object = message;
+        return tx;
     }
 
     private Path createFile() {
@@ -71,8 +79,10 @@ public class FileLedger<M, D> implements Ledger<M, D> {
                 Files.createFile(path);
                 break;
             } catch (FileAlreadyExistsException e) {
+                LOGGER.log(Level.INFO, e.toString(), e);
                 counter.incrementAndGet();
             } catch (IOException e) {
+                LOGGER.log(Level.INFO, e.toString(), e);
                 throw new IllegalStateException("Could not create tx file", e);
             }
         }
@@ -82,68 +92,110 @@ public class FileLedger<M, D> implements Ledger<M, D> {
 
     private void write(Path path, D serialized) {
         try {
-            if (String.class.isAssignableFrom(dataRepresentation.getType())) {
+            if (String.class.isAssignableFrom(format.getType())) {
                 Files.write(path, String.class.cast(serialized).getBytes(StandardCharsets.UTF_8));
-            } else if (byte[].class.isAssignableFrom(dataRepresentation.getType())) {
+            } else if (byte[].class.isAssignableFrom(format.getType())) {
                 Files.write(path, byte[].class.cast(serialized));
             } else {
-                throw new IllegalStateException("Unsupported data type: " + dataRepresentation.getType().getName());
+                throw new IllegalStateException("Unsupported data type: " + format.getType().getName());
             }
         } catch (IOException e) {
+            LOGGER.log(Level.INFO, e.toString(), e);
             throw new IllegalStateException("Writing tx failed", e);
         }
-    }
-
-    @Override
-    public List<Transaction<M>> getTransactions() {
-        List<Path> files = new ArrayList<>();
-        try {
-            Files.list(directory).forEach(files::add);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-
-        List<Transaction<M>> messages = files.stream()
-                .map(this::read)
-                .map(m -> (Transaction<M>) () -> m)
-                .collect(Collectors.toList());
-        return messages;
     }
 
     private M read(Path path) {
         M message;
 
         try {
-            if (String.class.isAssignableFrom(dataRepresentation.getType())) {
-                String string = Files.readAllLines(path, StandardCharsets.UTF_8).stream().collect(Collectors.joining());
-                D data = dataRepresentation.getType().cast(string);
-                message = mapper.deserialize(data);
-            } else if (byte[].class.isAssignableFrom(dataRepresentation.getType())) {
-                byte[] bytes = Files.readAllBytes(path);
-                D data = dataRepresentation.getType().cast(bytes);
-                message = mapper.deserialize(data);
+            Object object;
+            if (String.class.isAssignableFrom(format.getType())) {
+                object = Files.readAllLines(path, StandardCharsets.UTF_8).stream().collect(Collectors.joining());
+            } else if (byte[].class.isAssignableFrom(format.getType())) {
+                object = Files.readAllBytes(path);
             } else {
-                throw new IllegalStateException("Unsupported data type: " + dataRepresentation.getType().getName());
+                throw new IllegalStateException("Unsupported data type: " + format.getType().getName());
             }
+
+            D data = format.getType().cast(object);
+            message = mapper.deserialize(data);
         } catch (IOException e) {
+            LOGGER.log(Level.INFO, e.toString(), e);
             throw new IllegalStateException("Writing tx failed", e);
         }
 
         return message;
     }
 
+    @SuppressWarnings("unused")
     @Override
-    public List<Transaction<M>> getTransactions(LocalTime since) {
-        return Collections.emptyList();
+    public List<Transaction<M>> getTransactions(Instant since, Instant to) {
+        List<Path> files = new ArrayList<>();
+        try {
+            Files.list(directory).forEach(files::add);
+        } catch (IOException e) {
+            LOGGER.log(Level.INFO, e.toString(), e);
+            throw new IllegalStateException(e);
+        }
+
+        return files.stream()
+                .map(this::read)
+                .map(m -> fromMessage(m))
+                //.filter(tx -> tx.getTimestamp().isAfter(since))
+                //.filter(tx -> tx.getTimestamp().isBefore(to))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Transaction<M>> getTransactions(LocalTime since, LocalTime to) {
-        return Collections.emptyList();
+    public boolean addTransactionListener(String tag, TransactionListener<M> listener) {
+        return false;
     }
 
     @Override
-    public DataRepresentation<D> getDataRepresentation() {
-        return dataRepresentation;
+    public boolean removeTransactionListener(String tag, TransactionListener<M> listener) {
+        return false;
+    }
+
+    @Override
+    public Map<String, List<TransactionListener<M>>> getTransactionListeners() {
+        return Collections.emptyMap();
+    }
+
+    public Format<D> getFormat() {
+        return format;
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    private static class SimpleTransaction<M> implements Transaction<M> {
+
+        M object;
+        String identifier;
+        Instant timestamp;
+        String tag;
+
+        @Override
+        public M getObject() {
+            return object;
+        }
+
+        @Override
+        public String getIdentifier() {
+            return identifier;
+        }
+
+        @Override
+        public Instant getTimestamp() {
+            return timestamp;
+        }
+
+        @Override
+        public String getTag() {
+            return tag;
+        }
     }
 }

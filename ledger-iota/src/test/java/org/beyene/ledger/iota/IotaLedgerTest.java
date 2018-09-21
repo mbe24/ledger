@@ -2,7 +2,7 @@ package org.beyene.ledger.iota;
 
 import org.junit.Test;
 
-public class LedgerImplTest {
+public class IotaLedgerTest {
 
     @Test
     public void testAddTransaction() throws Exception {

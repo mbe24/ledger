@@ -1,28 +1,51 @@
 package org.beyene.ledger.api;
 
-import java.time.LocalTime;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
- *
  * @param <M> Message type
  * @param <D> Data type in ledger, e.g. String or byte[]
  */
-public interface Ledger<M, D> {
+public interface Ledger<M, D> extends AutoCloseable {
 
-    // Return object that contains timestamps
+    // is it necessary to return the meta data here?
+    // another possibility is to use completion handler
     Transaction<M> addTransaction(M message);
 
-    List<Transaction<M>> getTransactions();
+    /**
+     *
+     * @param since has to be greater or equal to Instant.MIN
+     * @param to has to be smaller or equal to Instant.MAX
+     * @return
+     */
+    List<Transaction<M>> getTransactions(Instant since, Instant to);
 
-    List<Transaction<M>> getTransactions(LocalTime since);
+    // addTransactionListener(tag, listener)
+    // tag == null means listen to all, already registered, tags (i.e. through configuration)
+    // TODO check whether null tag makes sense
+    default boolean addTransactionListener(String tag, TransactionListener<M> listener) {
+        return true;
+    }
 
-    List<Transaction<M>> getTransactions(LocalTime since, LocalTime to);
+    // removeTransactionListener
+    default boolean removeTransactionListener(String tag, TransactionListener<M> listener) {
+        return true;
+    }
 
-    // register listener...
-    // maybe add AbstractLedger or LedgerDelegate that handles listener code
+    // getTransactionListeners
+    default Map<String, List<TransactionListener<M>>> getTransactionListeners() {
+        return Collections.emptyMap();
+    }
 
-    DataRepresentation<D> getDataRepresentation();
+    Format<D> getFormat();
 
     // update configuration
+    // necessary now that TransactionListener is added?
+
+    @Override
+    void close() throws IOException;
 }
