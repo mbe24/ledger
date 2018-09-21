@@ -40,7 +40,8 @@ public class IotaLedgerProvider implements LedgerProvider {
 
         IotaLocalPoW localPoW = new PearlDiverLocalPoW();
         IotaAPIExtended.Builder apiBuilder = new IotaAPIExtended.Builder();
-        apiBuilder.protocol(Objects.toString(properties.get("iota.node.protocol")))
+        apiBuilder
+                .protocol(Objects.toString(properties.get("iota.node.protocol")))
                 .host(Objects.toString(properties.get("iota.node.host")))
                 .port(Objects.toString(properties.get("iota.node.port")))
                 .localPoW(localPoW);
@@ -74,7 +75,6 @@ public class IotaLedgerProvider implements LedgerProvider {
                 .setMapper(mapper)
                 .setListeners(listeners)
                 .setListenerThreads(2)
-                .setMinWeightMagnitude(13)
                 .build();
     }
 

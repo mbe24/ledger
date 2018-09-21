@@ -29,7 +29,7 @@ public interface LedgerProvider {
      * <p>Time which separates old from new transactions. All old transactions don't get pushed and instead
      * have to be polled by the user.</p>
      * <p>Default is the current time (in ms, long).</p>
-     *
+     * <p>
      * <li>ledger.pool.threads</li>
      * <p>Number of threads in the used pool. Use 0 to set threads to number of available processors.</p>
      * <p>Default is 2 (int).</p>

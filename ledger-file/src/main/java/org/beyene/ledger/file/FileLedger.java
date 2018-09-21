@@ -148,18 +148,17 @@ public class FileLedger<M, D> implements Ledger<M, D> {
                 .collect(Collectors.toList());
     }
 
-    @Override
     public boolean addTransactionListener(String tag, TransactionListener<M> listener) {
-        return false;
+        return true;
     }
 
-    @Override
-    public boolean removeTransactionListener(String tag, TransactionListener<M> listener) {
-        return false;
+    // removeTransactionListener
+    public boolean removeTransactionListener(String tag) {
+        return true;
     }
 
-    @Override
-    public Map<String, List<TransactionListener<M>>> getTransactionListeners() {
+    // getTransactionListeners
+    public Map<String, TransactionListener<M>> getTransactionListeners() {
         return Collections.emptyMap();
     }
 

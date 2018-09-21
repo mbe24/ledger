@@ -2,7 +2,6 @@ package org.beyene.ledger.api;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +13,12 @@ public interface Ledger<M, D> extends AutoCloseable {
 
     // is it necessary to return the meta data here?
     // another possibility is to use completion handler
+
+    /**
+     * @param transaction
+     * @return
+     * @throws IOException
+     */
     Transaction<M> addTransaction(Transaction<M> transaction) throws IOException;
 
     /**
@@ -23,23 +28,34 @@ public interface Ledger<M, D> extends AutoCloseable {
      */
     List<Transaction<M>> getTransactions(Instant since, Instant to);
 
-    // addTransactionListener(tag, listener)
     // tag == null means listen to all, already registered, tags (i.e. through configuration)
     // TODO check whether null tag makes sense
-    default boolean addTransactionListener(String tag, TransactionListener<M> listener) {
-        return true;
-    }
 
-    // removeTransactionListener
-    default boolean removeTransactionListener(String tag, TransactionListener<M> listener) {
-        return true;
-    }
+    /**
+     * @param tag      <code>null</code> is not allowed
+     * @param listener
+     * @return
+     */
+    boolean addTransactionListener(String tag, TransactionListener<M> listener);
 
-    // getTransactionListeners
-    default Map<String, List<TransactionListener<M>>> getTransactionListeners() {
-        return Collections.emptyMap();
-    }
+    /**
+     * @param tag
+     * @return
+     */
+    boolean removeTransactionListener(String tag);
 
+    // TODO
+    // think about using multiple listeners per tag
+    // utilize TransactionListenerManager
+
+    /**
+     * @return
+     */
+    Map<String, TransactionListener<M>> getTransactionListeners();
+
+    /**
+     * @return
+     */
     Format<D> getFormat();
 
     // update configuration

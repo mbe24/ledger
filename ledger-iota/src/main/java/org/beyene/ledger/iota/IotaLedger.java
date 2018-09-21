@@ -5,8 +5,10 @@ import org.beyene.ledger.iota.util.Iota;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -82,6 +84,8 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
         MessageDispatcher<M> dispatcher = new MessageDispatcher.Builder<M>()
                 .setMessageQueue(messageQueue)
                 .setMonitorContinuously(true)
+                .setListeners(listeners)
+                .setExecutorService(executorService)
                 .build();
         scheduledExecutor.submit(dispatcher);
     }
@@ -102,17 +106,20 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
 
     @Override
     public boolean addTransactionListener(String tag, TransactionListener<M> listener) {
-        return false;
+        Objects.requireNonNull(tag);
+        listeners.put(tag, listener);
+        return true;
     }
 
     @Override
-    public boolean removeTransactionListener(String tag, TransactionListener<M> listener) {
-        return false;
+    public boolean removeTransactionListener(String tag) {
+        listeners.remove(tag);
+        return true;
     }
 
     @Override
-    public Map<String, List<TransactionListener<M>>> getTransactionListeners() {
-        return null;
+    public Map<String, TransactionListener<M>> getTransactionListeners() {
+        return new HashMap<>(listeners);
     }
 
     @Override
@@ -138,7 +145,6 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
         private int poolThreads = 2;
         private int slidingWindow = 5; // in minutes
         private int hashCacheSize = 1_000;
-        private int minWeightMagnitude = 13; // needed for local PoW
         private int listenerThreads = 2;
 
         public Builder setApi(Iota api) {
@@ -188,11 +194,6 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
 
         public Builder setHashCacheSize(int cacheSize) {
             this.hashCacheSize = cacheSize;
-            return this;
-        }
-
-        public Builder setMinWeightMagnitude(int minWeightMagnitude) {
-            this.minWeightMagnitude = minWeightMagnitude;
             return this;
         }
 
