@@ -5,10 +5,7 @@ import org.beyene.ledger.iota.util.Iota;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -20,7 +17,6 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
     private final Iota api;
     private final MessageSender<M> sender;
 
-    private final Mapper<M, D> mapper;
     private final Format<D> format;
 
     private final ScheduledExecutorService scheduledExecutor;
@@ -38,7 +34,6 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
         this.api = builder.api;
         this.sender = builder.sender;
 
-        this.mapper = builder.mapper;
         this.format = builder.format;
         this.listeners = new ConcurrentHashMap<>(builder.listeners);
 
@@ -68,9 +63,9 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
                 .setMessageQueue(messageQueue)
                 .setTransactionQueue(transactionQueue)
                 .setTransactionsBeforePushThreshold(txsBeforePushThreshold)
-                .setTransactionBeforePushThresholdConsumer(messagesBeforePushThreshold::addAll)
+                .setMessagesBeforePushThreshold(messagesBeforePushThreshold)
                 .setFormat(format)
-                .setMapper(mapper)
+                .setDeserializer(builder.mapper)
                 .build();
 
         long initialDelay = builder.pollDelayInterval / 2;

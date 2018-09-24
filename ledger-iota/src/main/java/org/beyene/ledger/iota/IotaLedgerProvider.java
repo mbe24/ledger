@@ -63,9 +63,11 @@ public class IotaLedgerProvider implements LedgerProvider {
         MessageSender<M> messageSender = new DefaultMessagerSender.Builder()
                 .setApi(api)
                 .setFormat(format)
-                .setMapper(mapper)
+                .setSerializer(mapper)
                 .setTipAnalysisDepth(3)
                 .setMinWeightMagnitude(13)
+                //.setAddress("")
+                .setUseConfiguredAddress(false)
                 .build();
 
         return builder

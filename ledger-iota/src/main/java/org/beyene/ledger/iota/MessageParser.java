@@ -2,8 +2,9 @@ package org.beyene.ledger.iota;
 
 import jota.utils.TrytesConverter;
 import org.apache.commons.lang3.StringUtils;
+import org.beyene.ledger.api.Deserializer;
 import org.beyene.ledger.api.Format;
-import org.beyene.ledger.api.Mapper;
+import org.beyene.ledger.api.Mapper.MappingException;
 import org.beyene.ledger.api.Transaction;
 
 import javax.xml.bind.DatatypeConverter;
@@ -27,13 +28,13 @@ public class MessageParser<M, D> implements Runnable {
     private final BlockingQueue<Transaction<M>> messageQueue;
     private final BlockingQueue<Transaction<jota.model.Transaction>> transactionQueue;
     private final List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
-    private final Consumer<Collection<? extends Transaction<M>>>  oldTxsConsumer;
+    private final List<Transaction<M>> oldMessages;;
 
     // use set to avoid duplicates
     private final KeySetView<Transaction<jota.model.Transaction>, Boolean> inWork;
 
     private final Format<D> format;
-    private final Mapper<M, D> mapper;
+    private final Deserializer<M, D> deserializer;
 
     private final Comparator<Transaction<jota.model.Transaction>> comparator;
 
@@ -45,10 +46,10 @@ public class MessageParser<M, D> implements Runnable {
         this.messageQueue = builder.messageQueue;
         this.transactionQueue = builder.transactionQueue;
         this.txsBeforePushThreshold = builder.txsBeforePushThreshold;
-        this.oldTxsConsumer = builder.oldTxsConsumer;
+        this.oldMessages = builder.oldMessages;
         this.format = builder.format;
         this.inWork = ConcurrentHashMap.newKeySet();
-        this.mapper = builder.mapper;
+        this.deserializer = builder.deserializer;
 
         // TODO
         // share comparator within transaction poller
@@ -64,7 +65,7 @@ public class MessageParser<M, D> implements Runnable {
         // handle old transactions
         boolean firstRun = isFirstRun.compareAndSet(false, true);
         if (firstRun) {
-            handleMessages(txsBeforePushThreshold, oldTxsConsumer);
+            handleMessages(txsBeforePushThreshold, oldMessages::addAll);
         }
 
         if (transactionQueue.isEmpty())
@@ -75,7 +76,7 @@ public class MessageParser<M, D> implements Runnable {
     }
 
     private void handleMessages(List<Transaction<jota.model.Transaction>> batch,
-                                Consumer<Collection<? extends Transaction<M>>>  messageConsumer) {
+                                Consumer<Collection<? extends Transaction<M>>> messageConsumer) {
         Map<String, List<Transaction<jota.model.Transaction>>> bundles = groupByBundles(batch);
         List<Transaction<String>> messagesRaw = defragmentRawMessages(bundles);
         aggregateUnprocessedTransactions(bundles);
@@ -91,7 +92,7 @@ public class MessageParser<M, D> implements Runnable {
     }
 
     private void processMessages(List<Transaction<String>> messagesRaw,
-                                 Consumer<Collection<? extends Transaction<M>>>  messageConsumer) {
+                                 Consumer<Collection<? extends Transaction<M>>> messageConsumer) {
         List<Transaction<M>> messages = new ArrayList<>(messagesRaw.size());
 
         for (Transaction<String> tx : messagesRaw) {
@@ -100,7 +101,8 @@ public class MessageParser<M, D> implements Runnable {
             // BUT that presupposes backend represents data as strings
             // SO don't to anything for now - or use higher abstractions, if possible
             if (String.class.isAssignableFrom(format.getType())) {
-                object = jota.utils.TrytesConverter.toString(tx.getObject());
+                String trytesTrimmed = StringUtils.stripEnd(tx.getObject(), "9");
+                object = jota.utils.TrytesConverter.toString(trytesTrimmed);
             } else if (byte[].class.isAssignableFrom(format.getType())) {
                 // bytes are encoded as hex strings,
                 // since byte to trits conversion is incomplete (values 243-255 are not supported)
@@ -119,17 +121,18 @@ public class MessageParser<M, D> implements Runnable {
             D data = format.getType().cast(object);
 
             try {
-                M message = mapper.deserialize(data);
+                M message = deserializer.deserialize(data);
                 Transaction<M> mtx = new MessageTransaction<>(tx.getIdentifier(), tx.getTimestamp(), tx.getTag(), message);
                 messages.add(mtx);
-            } catch (Mapper.MappingException e) {
+            } catch (MappingException e) {
                 // possible that non-conforming clients wrote to tag
                 // just log and ignore
                 LOGGER.log(Level.INFO, e.toString(), e);
             }
 
-            messageConsumer.accept(messages);
         }
+
+        messageConsumer.accept(messages);
     }
 
     private List<Transaction<String>> defragmentRawMessages(Map<String, List<Transaction<jota.model.Transaction>>> bundles) {
@@ -217,9 +220,9 @@ public class MessageParser<M, D> implements Runnable {
         private BlockingQueue<Transaction<M>> messageQueue;
         private BlockingQueue<Transaction<jota.model.Transaction>> transactionQueue;
         private List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
-        private Consumer<Collection<? extends Transaction<M>>>  oldTxsConsumer;
+        private List<Transaction<M>> oldMessages;
         private Format<D> format;
-        private Mapper<M, D> mapper;
+        private Deserializer<M, D> deserializer;
 
         public Builder setMessageQueue(BlockingQueue<Transaction<M>> queue) {
             this.messageQueue = queue;
@@ -236,9 +239,8 @@ public class MessageParser<M, D> implements Runnable {
             return this;
         }
 
-        public Builder setTransactionBeforePushThresholdConsumer(
-                Consumer<Collection<? extends Transaction<M>>> oldTxsConsumer) {
-            this.oldTxsConsumer = oldTxsConsumer;
+        public Builder setMessagesBeforePushThreshold(List<Transaction<M>> messages) {
+            this.oldMessages = messages;
             return this;
         }
 
@@ -247,8 +249,8 @@ public class MessageParser<M, D> implements Runnable {
             return this;
         }
 
-        public Builder setMapper(Mapper<M, D> mapper) {
-            this.mapper = mapper;
+        public Builder setDeserializer(Deserializer<M, D> deserializer) {
+            this.deserializer = deserializer;
             return this;
         }
 

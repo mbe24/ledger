@@ -6,6 +6,7 @@ import jota.utils.Constants;
 import org.apache.commons.lang3.StringUtils;
 import org.beyene.ledger.api.Format;
 import org.beyene.ledger.api.Mapper;
+import org.beyene.ledger.api.Serializer;
 import org.beyene.ledger.api.Transaction;
 import org.beyene.ledger.iota.util.Iota;
 
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,7 +26,7 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
 
     private final Iota api;
     private final Format<D> format;
-    private final Mapper<M, D> mapper;
+    private final Serializer<M, D> serializer;
 
     private final String address;
     private final boolean useConfiguredAddress;
@@ -35,7 +37,7 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
     public DefaultMessagerSender(Builder builder) {
         this.api = builder.api;
         this.format = builder.format;
-        this.mapper = builder.mapper;
+        this.serializer = builder.serializer;
         this.address = builder.address;
         this.useConfiguredAddress = builder.useConfiguredAddress;
         this.depth = builder.depth;
@@ -45,11 +47,11 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
     @Override
     public Transaction<M> addTransaction(Transaction<M> transaction) throws IOException {
         M message = transaction.getObject();
-        D serialized = mapper.serialize(message);
+        D serialized = serializer.serialize(message);
         String messageTrytes = toTrytes(serialized);
         List<String> signatureFragments = fragmentData(messageTrytes);
 
-        Instant timestamp = Instant.now();
+        Instant timestamp = Optional.ofNullable(transaction.getTimestamp()).orElse(Instant.now());
         String[] txTrytes = createTransactionTrytes(signatureFragments, transaction, timestamp);
 
         try {
@@ -67,7 +69,9 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
         if (useConfiguredAddress)
             address = this.address;
         if (address == null || address.isEmpty())
-            address = StringUtils.rightPad("", Constants.ADDRESS_LENGTH_WITHOUT_CHECKSUM, '9');
+            address = "";
+
+        address = StringUtils.rightPad(address, Constants.ADDRESS_LENGTH_WITHOUT_CHECKSUM, '9');
 
         String tagRaw = transaction.getTag();
         String tag = StringUtils.rightPad(tagRaw, Constants.TAG_LENGTH, '9');
@@ -79,8 +83,6 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
         bundle.addTrytes(signatureFragments);
 
         bundle.getTransactions().stream().forEach(this::copyTag);
-
-
         bundle.getTransactions().stream().forEach(tx -> fixTimestamps(tx, timestamp.toEpochMilli()));
         bundle.finalize(null);
 
@@ -112,11 +114,15 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
 
     private List<String> fragmentData(String trytes) {
         List<String> signatureFragments = new ArrayList<>();
+        // 2187
         int messageLength = Constants.MESSAGE_LENGTH;
+
         for (int i = 0; i < trytes.length(); i += messageLength) {
             String fragment = trytes.substring(i, Math.min(i + messageLength, trytes.length()));
-            signatureFragments.add(StringUtils.rightPad(fragment, messageLength, '9'));
+            String padded = StringUtils.rightPad(fragment, messageLength, '9');
+            signatureFragments.add(padded);
         }
+
         return signatureFragments;
     }
 
@@ -125,7 +131,6 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
     }
 
     private void fixTimestamps(jota.model.Transaction tx, long timestamp) {
-
         // cf. com.iota.iri.TransactionValidator#hasInvalidTimestamp in IRI
         tx.setTimestamp(timestamp / 1000);
 
@@ -136,7 +141,7 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
 
     static class Builder<M, D> {
         private Iota api;
-        private Mapper<M, D> mapper;
+        private Serializer<M, D> serializer;
         private Format<D> format;
         private String address;
         private boolean useConfiguredAddress;
@@ -153,8 +158,8 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
             return this;
         }
 
-        public Builder setMapper(Mapper<M, D> mapper) {
-            this.mapper = mapper;
+        public Builder setSerializer(Serializer<M, D> serializer) {
+            this.serializer = serializer;
             return this;
         }
 

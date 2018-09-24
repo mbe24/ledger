@@ -59,7 +59,8 @@ public class FileLedgerStringTest {
     @Test
     public void testGetAndGetSingle() throws Exception {
         Message message = new Message().setCommand(Command.APPROVE).setRequest("APP007");
-        ledger.addTransaction(message);
+        Transaction<Message> tx = new MessageTransaction<>("", Instant.now(), "TAG", message);
+        ledger.addTransaction(tx);
 
         List<Message> messages = ledger.getTransactions(Instant.MIN, Instant.MAX)
                 .stream()
@@ -73,9 +74,12 @@ public class FileLedgerStringTest {
     @Test
     public void testGetAndGetMulti() throws Exception {
         Message messageApprove = new Message().setCommand(Command.APPROVE).setRequest("APP007");
-        ledger.addTransaction(messageApprove);
+        Transaction<Message> tx = new MessageTransaction<>("", Instant.now(), "TAG", messageApprove);
+        ledger.addTransaction(tx);
+
         Message messageDisapprove = new Message().setCommand(Command.DISAPPROVE).setRequest("DAP007");
-        ledger.addTransaction(messageDisapprove);
+        Transaction<Message> tx2 = new MessageTransaction<>("", Instant.now(), "TAG", messageDisapprove);
+        ledger.addTransaction(tx2);
 
         List<Message> messages = ledger.getTransactions(Instant.MIN, Instant.MAX)
                 .stream()

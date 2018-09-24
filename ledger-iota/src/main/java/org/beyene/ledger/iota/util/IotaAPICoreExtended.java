@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+@SuppressWarnings("unchecked")
 public class IotaAPICoreExtended implements IotaCore {
 
     private static final Logger log = LoggerFactory.getLogger(IotaAPICoreExtended.class);
@@ -302,7 +303,7 @@ public class IotaAPICoreExtended implements IotaCore {
         protected String host;
         protected String port;
         protected IotaLocalPoW localPoW;
-        protected Consumer<OkHttpClient.Builder> httpClientModifier = builder -> {};
+        protected Consumer<OkHttpClient.Builder> httpClientModifier = b -> {};
 
         private FileReader fileReader = null;
         private BufferedReader bufferedReader = null;
@@ -355,6 +356,7 @@ public class IotaAPICoreExtended implements IotaCore {
             return (T) this;
         }
 
+        @SuppressWarnings("unused")
         public T config(Properties properties) {
             this.nodeConfig = properties;
             return (T) this;
