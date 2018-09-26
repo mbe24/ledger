@@ -66,6 +66,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
                 .setTransactionsBeforePushThreshold(txsBeforePushThreshold)
                 .setMessagesBeforePushThreshold(messagesBeforePushThreshold)
                 .setFormat(format)
+                .setKeepAliveInterval(Duration.ofMinutes(builder.keepFragmentsAliveMinutes))
                 .setDeserializer(builder.mapper)
                 .build();
 
@@ -142,6 +143,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
         private int slidingWindow = 5; // in minutes
         private int hashCacheSize = 1_000;
         private int listenerThreads = 2;
+        private int keepFragmentsAliveMinutes = 60;
 
         public Builder setApi(Iota api) {
             this.api = api;
@@ -195,6 +197,11 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
 
         public Builder setListenerThreads(int listenerThreads) {
             this.listenerThreads = listenerThreads;
+            return this;
+        }
+
+        public Builder setKeepFragmentsAlive(int keepAliveMinutes) {
+            this.keepFragmentsAliveMinutes = keepAliveMinutes;
             return this;
         }
 

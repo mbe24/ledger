@@ -27,14 +27,13 @@ import static org.mockito.Mockito.*;
 
 public class DefaultMessagerSenderTest {
 
-    private List<String> transactionTrytes;
+    private List<String> transactionTrytes = new ArrayList<>();
     private Iota api;
     private MessageSender<String> sender;
     private AtomicReference<Boolean> throwException = new AtomicReference<>(false);
 
     @Before
     public void setUp() throws Exception {
-        this.transactionTrytes = new ArrayList<>();
         this.api = mock(Iota.class);
 
         doAnswer(invocation -> {
@@ -130,6 +129,7 @@ public class DefaultMessagerSenderTest {
     public void testAddTransactionFormatError() throws Exception {
         this.sender = new DefaultMessagerSender.Builder<String, Void>()
                 .setApi(api)
+                // setting unsupported format leads to illegal state exception
                 .setFormat(() -> Void.class)
                 .setSerializer(s -> s)
                 .build();

@@ -8,9 +8,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -22,7 +24,7 @@ import static org.mockito.Mockito.mock;
 
 public class MessageParserTest {
 
-    private List<String> transactionTrytes;
+    private List<String> transactionTrytes = new ArrayList<>();
     private MessageSender<String> sender;
 
     private BlockingQueue<Transaction<String>> messageQueue;
@@ -31,11 +33,9 @@ public class MessageParserTest {
     private List<Transaction<String>> oldMessages;
 
     private MessageParser<String, String> messageParser;
-    private ScheduledExecutorService executorService;
 
     @Before
     public void setUp() throws Exception {
-        this.transactionTrytes = new ArrayList<>();
         Iota api = mock(Iota.class);
 
         doAnswer(invocation -> {
@@ -63,17 +63,14 @@ public class MessageParserTest {
                 .setTransactionsBeforePushThreshold(txsBeforePushThreshold)
                 .setMessagesBeforePushThreshold(oldMessages)
                 .setFormat(Data.STRING)
+                .setKeepAliveInterval(Duration.ofMinutes(60))
                 .setDeserializer(s -> s)
                 .build();
-
-        this.executorService = Executors.newSingleThreadScheduledExecutor();
-        executorService.scheduleWithFixedDelay(messageParser, 0, 50, TimeUnit.MILLISECONDS);
     }
 
     @After
     public void tearDown() throws Exception {
         transactionTrytes.clear();
-        executorService.shutdownNow();
     }
 
     @Test
@@ -91,6 +88,9 @@ public class MessageParserTest {
         Assert.assertThat("no txs", transactionTrytes.size(), is(1));
 
         txs.stream().map(TransactionDecorator::new).forEach(transactionQueue::offer);
+
+        messageParser.run();
+
         Transaction<String> received = messageQueue.take();
         Assert.assertThat("message", received.getObject(), is(message));
     }
@@ -121,6 +121,8 @@ public class MessageParserTest {
         Assert.assertThat("no txs", transactionTrytes.size(), is(3));
 
         txs.stream().map(TransactionDecorator::new).forEach(transactionQueue::offer);
+
+        messageParser.run();
 
         List<Transaction<String>> drain = new ArrayList<>();
         for (int i = 0; i < source.size(); i++) {
@@ -160,6 +162,9 @@ public class MessageParserTest {
         //Collections.reverse(txs);
 
         txs.stream().map(TransactionDecorator::new).forEach(transactionQueue::offer);
+
+        messageParser.run();
+
         Transaction<String> received = messageQueue.take();
         Assert.assertThat("message", received.getObject(), is(message));
     }

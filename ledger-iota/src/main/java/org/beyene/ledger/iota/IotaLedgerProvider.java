@@ -59,6 +59,7 @@ public class IotaLedgerProvider implements LedgerProvider {
         setNumber(properties.get("ledger.pool.threads"), Number::intValue, builder::setPoolThreads);
         setNumber(properties.get("ledger.receive.slidingwindow"), Number::intValue, builder::setSlidingWindow);
         setNumber(properties.get("ledger.receive.hash.cache"), Number::intValue, builder::setHashCacheSize);
+        setNumber(properties.get("ledger.fragments.alive"), Number::intValue, builder::setKeepFragmentsAlive);
 
         MessageSender<M> messageSender = new DefaultMessagerSender.Builder()
                 .setApi(api)

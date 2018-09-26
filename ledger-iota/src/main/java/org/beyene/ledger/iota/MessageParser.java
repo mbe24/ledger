@@ -8,6 +8,7 @@ import org.beyene.ledger.api.Mapper.MappingException;
 import org.beyene.ledger.api.Transaction;
 
 import javax.xml.bind.DatatypeConverter;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -32,6 +33,7 @@ public class MessageParser<M, D> implements Runnable {
 
     // use set to avoid duplicates
     private final KeySetView<Transaction<jota.model.Transaction>, Boolean> inWork;
+    private final Duration keepAliveInterval;
 
     private final Format<D> format;
     private final Deserializer<M, D> deserializer;
@@ -49,6 +51,7 @@ public class MessageParser<M, D> implements Runnable {
         this.oldMessages = builder.oldMessages;
         this.format = builder.format;
         this.inWork = ConcurrentHashMap.newKeySet();
+        this.keepAliveInterval = builder.keepAliveInterval;
         this.deserializer = builder.deserializer;
 
         // TODO
@@ -64,6 +67,9 @@ public class MessageParser<M, D> implements Runnable {
     public void run() {
         // handle old transactions
         boolean firstRun = isFirstRun.compareAndSet(false, true);
+
+        // firstRun OR tagsChanged
+        // maybe set by notifyTagsChanged method
         if (firstRun) {
             handleMessages(txsBeforePushThreshold, oldMessages::addAll);
         }
@@ -78,9 +84,16 @@ public class MessageParser<M, D> implements Runnable {
     private void handleMessages(List<Transaction<jota.model.Transaction>> batch,
                                 Consumer<Collection<? extends Transaction<M>>> messageConsumer) {
         Map<String, List<Transaction<jota.model.Transaction>>> bundles = groupByBundles(batch);
+        // extracts and defragments messages, only leaves incomplete ones in map
         List<Transaction<String>> messagesRaw = defragmentRawMessages(bundles);
+        dropOldFragments();
         aggregateUnprocessedTransactions(bundles);
         processMessages(messagesRaw, messageConsumer);
+    }
+
+    private void dropOldFragments() {
+        Instant dropTime = Instant.now().minus(keepAliveInterval);
+        inWork.removeIf(tx -> tx.getTimestamp().isBefore(dropTime));
     }
 
     private void aggregateUnprocessedTransactions(Map<String, List<Transaction<jota.model.Transaction>>> bundles) {
@@ -222,6 +235,7 @@ public class MessageParser<M, D> implements Runnable {
         private List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
         private List<Transaction<M>> oldMessages;
         private Format<D> format;
+        private Duration keepAliveInterval;
         private Deserializer<M, D> deserializer;
 
         public Builder setMessageQueue(BlockingQueue<Transaction<M>> queue) {
@@ -246,6 +260,11 @@ public class MessageParser<M, D> implements Runnable {
 
         public Builder setFormat(Format<D> format) {
             this.format = format;
+            return this;
+        }
+
+        public Builder setKeepAliveInterval(Duration keepAliveInterval) {
+            this.keepAliveInterval = keepAliveInterval;
             return this;
         }
 
