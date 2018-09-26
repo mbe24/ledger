@@ -4,6 +4,7 @@ import org.beyene.ledger.api.*;
 import org.beyene.ledger.iota.util.Iota;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -52,8 +53,8 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
                 .setQueue(transactionQueue)
                 .setTags(listeners.keySet())
                 .setPushThreshold(pushThreshold)
+                .setSlidingWindow(Duration.ofMinutes(builder.slidingWindow))
                 .setTransactionBeforePushThresholdConsumer(txsBeforePushThreshold::addAll)
-                .setSlidingWindow(builder.slidingWindow)
                 .setCacheSize(builder.hashCacheSize)
                 .build();
         scheduledExecutor.scheduleWithFixedDelay(txProducer, 0, builder.pollDelayInterval, TimeUnit.MILLISECONDS);

@@ -45,7 +45,7 @@ public class TransactionPoller implements Runnable {
                 .thenComparing(jota.model.Transaction::getBundle)
                 .thenComparing(jota.model.Transaction::getCurrentIndex);
         this.knownHashes = CacheBuilder.newBuilder().maximumSize(builder.cacheSize).<String, Boolean>build().asMap();
-        this.slidingWindowSize = Duration.ofMinutes(builder.slidingWindow);
+        this.slidingWindowSize = builder.slidingWindow;
     }
 
     @Override
@@ -53,24 +53,32 @@ public class TransactionPoller implements Runnable {
         if (tags.isEmpty())
             return;
 
+        List<jota.model.Transaction> transactions;
         try {
-            List<jota.model.Transaction> transactions = readTxsFromTangle();
-
-            Map<Boolean, List<jota.model.Transaction>> partition = partitionTxsByPushThreshold(transactions);
-            List<jota.model.Transaction> newTransactions = processNewTransactions(partition);
-            updatePushThreshold(newTransactions);
-
-            processOldTransactions(partition.get(Boolean.FALSE));
+            transactions = readTxsFromTangle();
         } catch (ArgumentException e) {
             LOGGER.log(Level.INFO, e.toString(), e);
+            // handle or rethrow?
+            return;
         }
+
+        Map<Boolean, List<jota.model.Transaction>> partition = partitionTxsByPushThreshold(transactions);
+        List<jota.model.Transaction> newTransactions = processNewTransactions(partition);
+        // NOTE newTransactions still has duplicates, unique txs are already forwarded to queue
+        updatePushThreshold(newTransactions);
+
+        List<jota.model.Transaction> oldTxs = partition.getOrDefault(Boolean.FALSE, Collections.emptyList());
+        processOldTransactions(oldTxs);
     }
 
     private List<jota.model.Transaction> processNewTransactions(Map<Boolean, List<jota.model.Transaction>> partition) {
-        List<jota.model.Transaction> newTransactions = partition.get(Boolean.TRUE);
+        List<jota.model.Transaction> newTransactions = partition.getOrDefault(Boolean.TRUE, Collections.emptyList());
         Collections.sort(newTransactions, comparator);
-        newTransactions.forEach(tx -> knownHashes.put(tx.getHash(), Boolean.TRUE));
-        newTransactions.stream().map(TransactionDecorator::new).forEach(queue::add);
+        newTransactions.stream()
+                .sequential()
+                .filter(tx -> !knownHashes.containsKey(tx.getHash()))
+                .peek(tx -> knownHashes.put(tx.getHash(), Boolean.TRUE))
+                .map(TransactionDecorator::new).forEach(queue::add);
         return newTransactions;
     }
 
@@ -80,8 +88,7 @@ public class TransactionPoller implements Runnable {
     }
 
     private Map<Boolean, List<jota.model.Transaction>> partitionTxsByPushThreshold(List<jota.model.Transaction> transactions) {
-        return transactions
-                .stream()
+        return transactions.stream()
                 .filter(tx -> tx.getTimestamp() > 0)
                 .filter(tx -> !knownHashes.containsKey(tx.getHash()))
                 .collect(Collectors
@@ -102,9 +109,15 @@ public class TransactionPoller implements Runnable {
         if (!firstRun)
             return;
 
+        Collections.sort(txsBeforePush, comparator);
         txsBeforePush.forEach(tx -> knownHashes.put(tx.getHash(), Boolean.TRUE));
-        List<Transaction<jota.model.Transaction>> oldTxs = txsBeforePush
-                .stream()
+        // use dedicated cache with no size restriction to guarantee that ols tx are unique
+        Set<String> oldTxCache = new HashSet<>();
+
+        List<Transaction<jota.model.Transaction>> oldTxs = txsBeforePush.stream()
+                .sequential()
+                .filter(tx -> !oldTxCache.contains(tx.getHash()))
+                .peek(tx -> oldTxCache.add(tx.getHash()))
                 .map(TransactionDecorator::new)
                 .collect(Collectors.toList());
         oldTxsConsumer.accept(oldTxs);
@@ -117,7 +130,7 @@ public class TransactionPoller implements Runnable {
         private Set<String> tags;
         private Instant pushThreshold;
         private Consumer<Collection<Transaction<jota.model.Transaction>>> oldTxsConsumer;
-        private int slidingWindow;
+        private Duration slidingWindow;
         private int cacheSize;
 
         public Builder setApi(Iota api) {
@@ -140,14 +153,14 @@ public class TransactionPoller implements Runnable {
             return this;
         }
 
-        public Builder setTransactionBeforePushThresholdConsumer(
-                Consumer<Collection<Transaction<jota.model.Transaction>>> oldTxsConsumer) {
-            this.oldTxsConsumer = oldTxsConsumer;
+        public Builder setSlidingWindow(Duration slidingWindow) {
+            this.slidingWindow = slidingWindow;
             return this;
         }
 
-        public Builder setSlidingWindow(int slidingWindow) {
-            this.slidingWindow = slidingWindow;
+        public Builder setTransactionBeforePushThresholdConsumer(
+                Consumer<Collection<Transaction<jota.model.Transaction>>> oldTxsConsumer) {
+            this.oldTxsConsumer = oldTxsConsumer;
             return this;
         }
 

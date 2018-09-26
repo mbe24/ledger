@@ -1,7 +1,9 @@
 package org.beyene.ledger.iota;
 
+import jota.error.ArgumentException;
 import org.apache.commons.lang3.StringUtils;
 import org.beyene.ledger.api.Data;
+import org.beyene.ledger.api.Format;
 import org.beyene.ledger.api.Transaction;
 import org.beyene.ledger.iota.util.Iota;
 import org.junit.After;
@@ -9,11 +11,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -24,15 +28,20 @@ import static org.mockito.Mockito.*;
 public class DefaultMessagerSenderTest {
 
     private List<String> transactionTrytes;
+    private Iota api;
     private MessageSender<String> sender;
+    private AtomicReference<Boolean> throwException = new AtomicReference<>(false);
 
     @Before
     public void setUp() throws Exception {
         this.transactionTrytes = new ArrayList<>();
-        Iota api = mock(Iota.class);
+        this.api = mock(Iota.class);
 
         doAnswer(invocation -> {
             Stream.of(invocation.<String[]>getArgument(0)).forEach(transactionTrytes::add);
+            if (throwException.get())
+                throw new ArgumentException("exception for unit test");
+
             return Collections.emptyList();
         }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class));
 
@@ -49,6 +58,7 @@ public class DefaultMessagerSenderTest {
     @After
     public void tearDown() throws Exception {
         transactionTrytes.clear();
+        throwException.set(false);
     }
 
     @Test
@@ -108,5 +118,21 @@ public class DefaultMessagerSenderTest {
 
         String reconstructedMessage = jota.utils.TrytesConverter.toString(trytesTrimmed);
         Assert.assertThat("message", reconstructedMessage, is(message));
+    }
+
+    @Test(expected = IOException.class)
+    public void testAddTransactionApiError() throws Exception {
+        throwException.set(true);
+        sender.addTransaction(new MessageTransaction<>("ID", Instant.now(), "TAG", "This is how we do"));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testAddTransactionFormatError() throws Exception {
+        this.sender = new DefaultMessagerSender.Builder<String, Void>()
+                .setApi(api)
+                .setFormat(() -> Void.class)
+                .setSerializer(s -> s)
+                .build();
+        sender.addTransaction(new MessageTransaction<>("ID", Instant.now(), "TAG", "This is how we do"));
     }
 }
