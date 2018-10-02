@@ -10,6 +10,7 @@ import jota.utils.StopWatch;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public interface Iota extends IotaCore {
     GetNewAddressResponse getNewAddress(String seed, int security, int index, boolean checksum, int total, boolean returnAll) throws ArgumentException;
 

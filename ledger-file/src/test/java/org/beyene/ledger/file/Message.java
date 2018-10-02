@@ -51,7 +51,3 @@ public class Message {
         return result;
     }
 }
-
-enum Command {
-    APPROVE, DISAPPROVE;
-}

@@ -19,7 +19,7 @@ public class MessageDispatcher<M> implements Runnable {
     private final boolean monitorContinuously;
     private ExecutorService executorService;
 
-    public MessageDispatcher(Builder builder) {
+    public MessageDispatcher(Builder<M> builder) {
         this.queue = builder.queue;
         this.listeners = builder.listeners;
         this.monitorContinuously = builder.monitorContinuously;
@@ -59,28 +59,28 @@ public class MessageDispatcher<M> implements Runnable {
         private boolean monitorContinuously;
         private ExecutorService executorService;
 
-        public Builder setMessageQueue(BlockingQueue<Transaction<M>> queue) {
+        public Builder<M> setMessageQueue(BlockingQueue<Transaction<M>> queue) {
             this.queue = queue;
             return this;
         }
 
-        public Builder setListeners(ConcurrentMap<String, TransactionListener<M>> listeners) {
+        public Builder<M> setListeners(ConcurrentMap<String, TransactionListener<M>> listeners) {
             this.listeners = listeners;
             return this;
         }
 
-        public Builder setMonitorContinuously(boolean monitorContinuously) {
+        public Builder<M> setMonitorContinuously(boolean monitorContinuously) {
             this.monitorContinuously = monitorContinuously;
             return this;
         }
 
-        public Builder setExecutorService(ExecutorService executorService) {
+        public Builder<M> setExecutorService(ExecutorService executorService) {
             this.executorService = executorService;
             return this;
         }
 
-        public MessageDispatcher build() {
-            return new MessageDispatcher(this);
+        public MessageDispatcher<M> build() {
+            return new MessageDispatcher<>(this);
         }
 
     }

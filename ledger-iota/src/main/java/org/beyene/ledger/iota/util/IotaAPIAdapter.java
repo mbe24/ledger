@@ -11,6 +11,7 @@ import jota.utils.StopWatch;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class IotaAPIAdapter implements Iota {
 
     private final IotaAPI delegate;

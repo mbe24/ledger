@@ -15,6 +15,7 @@ import static jota.pow.JCurl.HASH_LENGTH;
  * <a href="https://github.com/iotaledger/iota.lib.java/issues/78">this
  * issue</a> is fixed.
  */
+@SuppressWarnings("unused")
 public class CurlSigning {
     public final static int KEY_LENGTH = 6561;
 

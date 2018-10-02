@@ -23,12 +23,12 @@ public class TransactionListenerManager<M> {
     }
 
     public boolean addTransactionListener(String tag, TransactionListener<M> listener) {
-        List<TransactionListener<M>> tagListeners = listeners.computeIfAbsent(tag, k -> new CopyOnWriteArrayList());
+        List<TransactionListener<M>> tagListeners = listeners.computeIfAbsent(tag, k -> new CopyOnWriteArrayList<>());
         return tagListeners.add(listener);
     }
 
     public boolean removeTransactionListener(String tag, TransactionListener<M> listener) {
-        List<TransactionListener<M>> tagListeners = listeners.computeIfAbsent(tag, k -> new CopyOnWriteArrayList());
+        List<TransactionListener<M>> tagListeners = listeners.computeIfAbsent(tag, k -> new CopyOnWriteArrayList<>());
         return tagListeners.remove(listener);
     }
 

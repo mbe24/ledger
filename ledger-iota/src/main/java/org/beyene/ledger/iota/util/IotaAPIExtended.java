@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+@SuppressWarnings(value = {"unchecked", "rawtypes"})
 public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
 
     private static final Logger log = LoggerFactory.getLogger(IotaAPICoreExtended.class);
@@ -62,7 +63,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
             StopWatch stopWatch = new StopWatch();
             GetNewAddressResponse gnr = this.getNewAddress(seed, security, start, false, end, true);
             if(gnr != null && gnr.getAddresses() != null) {
-                Bundle[] bundles = this.bundlesFromAddresses((String[])gnr.getAddresses().toArray(new String[gnr.getAddresses().size()]), inclusionStates);
+                Bundle[] bundles = this.bundlesFromAddresses(gnr.getAddresses().toArray(new String[gnr.getAddresses().size()]), inclusionStates);
                 return GetTransferResponse.create(bundles, stopWatch.getElapsedTimeMili());
             } else {
                 return GetTransferResponse.create(new Bundle[0], stopWatch.getElapsedTimeMili());
@@ -126,7 +127,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
 
                             while(var5.hasNext()) {
                                 Transaction t = (Transaction)var5.next();
-                                t.setPersistence(Boolean.valueOf(thisInclusion));
+                                t.setPersistence(thisInclusion);
                             }
                         }
 
@@ -171,7 +172,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
         try {
             this.broadcastAndStore(res.getTrytes());
         } catch (ArgumentException var9) {
-            return new ArrayList<Transaction>();
+            return new ArrayList<>();
         }
 
         List<Transaction> trx = new ArrayList<>();
@@ -206,7 +207,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
 
     @Override
     public List<Transaction> findTransactionObjectsByAddresses(String[] addresses) throws ArgumentException {
-        ArrayList addressesWithoutChecksum = new ArrayList();
+        List<String> addressesWithoutChecksum = new ArrayList<>();
         String[] ftr = addresses;
         int var4 = addresses.length;
 
@@ -216,26 +217,26 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
             addressesWithoutChecksum.add(addressO);
         }
 
-        FindTransactionResponse var8 = this.findTransactions((String[])addressesWithoutChecksum.toArray(new String[0]), (String[])null, (String[])null, (String[])null);
-        return (List)(var8 != null && var8.getHashes() != null?this.findTransactionsObjectsByHashes(var8.getHashes()):new ArrayList());
+        FindTransactionResponse var8 = this.findTransactions(addressesWithoutChecksum.toArray(new String[0]), null, null, null);
+        return var8 != null && var8.getHashes() != null?this.findTransactionsObjectsByHashes(var8.getHashes()):new ArrayList<>();
     }
 
     @Override
     public List<Transaction> findTransactionObjectsByTag(String[] tags) throws ArgumentException {
-        FindTransactionResponse ftr = this.findTransactions((String[])null, tags, (String[])null, (String[])null);
-        return (List)(ftr != null && ftr.getHashes() != null?this.findTransactionsObjectsByHashes(ftr.getHashes()):new ArrayList());
+        FindTransactionResponse ftr = this.findTransactions(null, tags, null, null);
+        return ftr != null && ftr.getHashes() != null?this.findTransactionsObjectsByHashes(ftr.getHashes()):new ArrayList<>();
     }
 
     @Override
     public List<Transaction> findTransactionObjectsByApprovees(String[] approvees) throws ArgumentException {
-        FindTransactionResponse ftr = this.findTransactions((String[])null, (String[])null, approvees, (String[])null);
-        return (List)(ftr != null && ftr.getHashes() != null?this.findTransactionsObjectsByHashes(ftr.getHashes()):new ArrayList());
+        FindTransactionResponse ftr = this.findTransactions(null, null, approvees, null);
+        return ftr != null && ftr.getHashes() != null?this.findTransactionsObjectsByHashes(ftr.getHashes()):new ArrayList<>();
     }
 
     @Override
     public List<Transaction> findTransactionObjectsByBundle(String[] bundles) throws ArgumentException {
-        FindTransactionResponse ftr = this.findTransactions((String[])null, (String[])null, (String[])null, bundles);
-        return (List)(ftr != null && ftr.getHashes() != null?this.findTransactionsObjectsByHashes(ftr.getHashes()):new ArrayList());
+        FindTransactionResponse ftr = this.findTransactions(null, null, null, bundles);
+        return ftr != null && ftr.getHashes() != null?this.findTransactionsObjectsByHashes(ftr.getHashes()):new ArrayList<>();
     }
 
     @Override
@@ -248,7 +249,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
             throw new ArgumentException("Invalid transfers provided.");
         } else {
             Bundle bundle = new Bundle();
-            ArrayList signatureFragments = new ArrayList();
+            List<String> signatureFragments = new ArrayList<>();
             long totalValue = 0L;
             String tag = "";
 
@@ -302,7 +303,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
                             var28.add(var33.getAddress());
                         }
 
-                        GetBalancesResponse var31 = this.getBalances(Integer.valueOf(100), var28);
+                        GetBalancesResponse var31 = this.getBalances(100, var28);
                         String[] var34 = var31.getBalances();
                         ArrayList var38 = new ArrayList();
                         long var35 = 0L;
@@ -315,7 +316,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
                             long thisBalance = Long.parseLong(balance);
                             if(thisBalance > 0L) {
                                 var35 += thisBalance;
-                                Input inputEl = (Input)inputs.get(i++);
+                                Input inputEl = inputs.get(i++);
                                 inputEl.setBalance(thisBalance);
                                 var38.add(inputEl);
                                 if(var35 >= totalValue) {
@@ -385,7 +386,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
             throw new ArgumentException("Invalid security level provided.");
         } else {
             GetBalancesResponse getBalancesResponse = this.getBalances(Integer.valueOf(100), addresses);
-            List balances = Arrays.asList(getBalancesResponse.getBalances());
+            List<String> balances = Arrays.asList(getBalancesResponse.getBalances());
             boolean thresholdReached = threshold == 0L;
             int i = -1;
             ArrayList inputs = new ArrayList();
@@ -395,7 +396,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
             while(var14.hasNext()) {
                 String address = (String)var14.next();
                 ++i;
-                long balance = Long.parseLong((String)balances.get(i));
+                long balance = Long.parseLong(balances.get(i));
                 if(balance > 0L) {
                     Input newEntry = new Input(address, balance, start + i, security);
                     inputs.add(newEntry);
@@ -420,22 +421,22 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
         if(!InputValidator.isHash(transaction)) {
             throw new ArgumentException("Invalid hashes provided.");
         } else {
-            Bundle bundle = this.traverseBundle(transaction, (String)null, new Bundle());
+            Bundle bundle = this.traverseBundle(transaction, null, new Bundle());
             if(bundle == null) {
                 throw new ArgumentException("Invalid bundle.");
             } else {
                 StopWatch stopWatch = new StopWatch();
                 long totalSum = 0L;
-                String bundleHash = ((Transaction)bundle.getTransactions().get(0)).getBundle();
+                String bundleHash = (bundle.getTransactions().get(0)).getBundle();
                 ICurl curl = SpongeFactory.create(SpongeFactory.Mode.KERL);
                 curl.reset();
                 ArrayList signaturesToValidate = new ArrayList();
 
                 for(int bundleFromTrxs = 0; bundleFromTrxs < bundle.getTransactions().size(); ++bundleFromTrxs) {
-                    Transaction bundleFromTxString = (Transaction)bundle.getTransactions().get(bundleFromTrxs);
+                    Transaction bundleFromTxString = bundle.getTransactions().get(bundleFromTrxs);
                     Long bundleValue = Long.valueOf(bundleFromTxString.getValue());
                     totalSum += bundleValue.longValue();
-                    if((long)bundleFromTrxs != ((Transaction)bundle.getTransactions().get(bundleFromTrxs)).getCurrentIndex()) {
+                    if((long)bundleFromTrxs != (bundle.getTransactions().get(bundleFromTrxs)).getCurrentIndex()) {
                         throw new ArgumentException("Invalid bundle.");
                     }
 
@@ -448,7 +449,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
                         address.getSignatureFragments().add(bundleFromTxString.getSignatureFragments());
 
                         for(int isValidSignature = bundleFromTrxs; isValidSignature < bundle.getTransactions().size() - 1; ++isValidSignature) {
-                            Transaction newBundleTx = (Transaction)bundle.getTransactions().get(bundleFromTrxs + 1);
+                            Transaction newBundleTx = bundle.getTransactions().get(bundleFromTrxs + 1);
                             if(newBundleTx.getAddress().equals(signatureFragments) && newBundleTx.getValue() == 0L && address.getSignatureFragments().indexOf(newBundleTx.getSignatureFragments()) == -1) {
                                 address.getSignatureFragments().add(newBundleTx.getSignatureFragments());
                             }
@@ -468,7 +469,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
                         throw new ArgumentException("Invalid bundle hash.");
                     } else {
                         bundle.setLength(bundle.getTransactions().size());
-                        if(((Transaction)bundle.getTransactions().get(bundle.getLength() - 1)).getCurrentIndex() != ((Transaction)bundle.getTransactions().get(bundle.getLength() - 1)).getLastIndex()) {
+                        if((bundle.getTransactions().get(bundle.getLength() - 1)).getCurrentIndex() != (bundle.getTransactions().get(bundle.getLength() - 1)).getLastIndex()) {
                             throw new ArgumentException("Invalid bundle.");
                         } else {
                             Iterator var19 = signaturesToValidate.iterator();
@@ -480,7 +481,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
                                 }
 
                                 Signature var20 = (Signature)var19.next();
-                                String[] var21 = (String[])var20.getSignatureFragments().toArray(new String[var20.getSignatureFragments().size()]);
+                                String[] var21 = var20.getSignatureFragments().toArray(new String[var20.getSignatureFragments().size()]);
                                 String var22 = var20.getAddress();
                                 var23 = (new Signing(this.customCurl.clone())).validateSignatures(var22, var21, bundleHash).booleanValue();
                             } while(var23);
@@ -551,7 +552,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
 
         for(int i = 0; i < trxs.size(); ++i) {
             FindTransactionResponse response = this.findTransactionsByBundles(new String[]{((Transaction)trxs.get(i)).getBundle()});
-            successful[i] = Boolean.valueOf(response.getHashes().length != 0);
+            successful[i] = response.getHashes().length != 0;
         }
 
         return SendTransferResponse.create(trxs, successful, stopWatch.getElapsedTimeMili());
@@ -644,7 +645,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
             if(totalValue == 0) {
                 throw new RuntimeException("Invalid value transfer: the transfer does not require a signature.");
             } else {
-                GetBalancesResponse var20 = this.getBalances(Integer.valueOf(100), Collections.singletonList(inputAddress));
+                GetBalancesResponse var20 = this.getBalances(100, Collections.singletonList(inputAddress));
                 String[] var21 = var20.getBalances();
                 long var22 = 0L;
                 String[] var23 = var21;
@@ -692,10 +693,10 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
         long totalTransferValue = totalValue;
 
         for(int i = 0; i < inputs.size(); ++i) {
-            long thisBalance = ((Input)inputs.get(i)).getBalance();
+            long thisBalance = inputs.get(i).getBalance();
             long toSubtract = 0L - thisBalance;
             long timestamp = (long)Math.floor((double)(Calendar.getInstance().getTimeInMillis() / 1000L));
-            bundle.addEntry(security, ((Input)inputs.get(i)).getAddress(), toSubtract, tag, timestamp);
+            bundle.addEntry(security, inputs.get(i).getAddress(), toSubtract, tag, timestamp);
             if(thisBalance >= totalTransferValue) {
                 long remainder = thisBalance - totalTransferValue;
                 if(remainder > 0L && remainderAddress != null) {
@@ -705,7 +706,7 @@ public class IotaAPIExtended extends IotaAPICoreExtended implements Iota {
 
                 if(remainder > 0L) {
                     GetNewAddressResponse res = this.getNewAddress(seed, security, 0, false, 0, false);
-                    bundle.addEntry(1, (String)res.getAddresses().get(0), remainder, tag, timestamp);
+                    bundle.addEntry(1, res.getAddresses().get(0), remainder, tag, timestamp);
                     return IotaAPIUtils.signInputsAndReturn(seed, inputs, bundle, signatureFragments, this.customCurl.clone());
                 }
 

@@ -10,6 +10,8 @@ public interface Mapper<T, R> extends Serializer<T, R>, Deserializer<T, R> {
 
     class MappingException extends IllegalArgumentException {
 
+        private static final long serialVersionUID = 1L;
+
         public MappingException(String s) {
             super(s);
         }

@@ -8,6 +8,12 @@ subprojects {
         mavenCentral()
     }
 
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:all" << "-Werror"
+        }
+    }
+
     dependencies {
         testCompile 'junit:junit:4.12', {
             exclude group: 'org.hamcrest', module: 'hamcrest-core'

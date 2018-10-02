@@ -34,7 +34,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings(value = {"unchecked", "rawtypes"})
 public class IotaAPICoreExtended implements IotaCore {
 
     private static final Logger log = LoggerFactory.getLogger(IotaAPICoreExtended.class);

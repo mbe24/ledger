@@ -29,7 +29,7 @@ public class MessageParserTest {
 
     private BlockingQueue<Transaction<String>> messageQueue;
     private BlockingQueue<Transaction<jota.model.Transaction>> transactionQueue;
-    private List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
+    private BlockingQueue<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
     private List<Transaction<String>> oldMessages;
 
     private MessageParser<String, String> messageParser;
@@ -54,14 +54,14 @@ public class MessageParserTest {
 
         this.messageQueue = new LinkedBlockingQueue<>();
         this.transactionQueue = new LinkedBlockingQueue<>();
-        this.txsBeforePushThreshold = new ArrayList<>();
+        this.txsBeforePushThreshold = new LinkedBlockingQueue<>();
         this.oldMessages = new ArrayList<>();
 
         this.messageParser = new MessageParser.Builder<String, String>()
                 .setMessageQueue(messageQueue)
                 .setTransactionQueue(transactionQueue)
                 .setTransactionsBeforePushThreshold(txsBeforePushThreshold)
-                .setMessagesBeforePushThreshold(oldMessages)
+                .setMessagesBeforePushThresholdConsumer(oldMessages::addAll)
                 .setFormat(Data.STRING)
                 .setKeepAliveInterval(Duration.ofMinutes(60))
                 .setDeserializer(s -> s)

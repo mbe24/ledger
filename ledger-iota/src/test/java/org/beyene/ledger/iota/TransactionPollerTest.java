@@ -1,6 +1,8 @@
 package org.beyene.ledger.iota;
 
 import org.beyene.ledger.api.Transaction;
+import org.beyene.ledger.iota.TagChangeListener.TagChangeAction;
+import org.beyene.ledger.iota.TagChangeListener.TagChangeEvent;
 import org.beyene.ledger.iota.util.Iota;
 import org.junit.After;
 import org.junit.Assert;
@@ -41,9 +43,7 @@ public class TransactionPollerTest {
         // duplicate all txs
         DUPLICATE,
         // txs are provided in 'returnedTransactions'
-        PROVIDED,
-        // fill up cache by duplicating last txs and add first tx again
-        CACHE;
+        PROVIDED;
     }
 
     private static final int MULTI_SIZE = 5;
@@ -83,6 +83,13 @@ public class TransactionPollerTest {
         this.txsBeforePushThreshold = new ArrayList<>();
         this.oldTxsConsumer = txsBeforePushThreshold::addAll;
 
+        Map<String, Boolean> knownHashes = new LinkedHashMap<String, Boolean>() {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+                return size() > hashCacheSize;
+            }
+        };
+
         this.poller = new TransactionPoller.Builder()
                 .setApi(api)
                 .setQueue(queue)
@@ -90,7 +97,7 @@ public class TransactionPollerTest {
                 .setPushThreshold(pushThreshold)
                 .setSlidingWindow(slidingWindow)
                 .setTransactionBeforePushThresholdConsumer(oldTxsConsumer)
-                .setCacheSize(hashCacheSize)
+                .setKnownHashesCache(knownHashes)
                 .build();
     }
 
@@ -144,7 +151,7 @@ public class TransactionPollerTest {
                 .collect(Collectors.toList());
     }
 
-    private List<jota.model.Transaction> createTxs(Instant reference, int offset, int n, int delta) {
+    private List<jota.model.Transaction> createTxs(Instant reference, int offset, int n, int delta, String tag) {
         // add tolerance
         Instant threshold = reference.plusSeconds(delta);
         AtomicInteger counter = new AtomicInteger(offset);
@@ -154,13 +161,18 @@ public class TransactionPollerTest {
                 .sequential()
                 .boxed()
                 .map(i -> threshold.plusSeconds(delta * i))
-                .map(timestamp -> new jota.model.Transaction("ADDRESS", 0, "TAG", timestamp.toEpochMilli()))
+                .map(timestamp -> new jota.model.Transaction("ADDRESS", 0, tag, timestamp.toEpochMilli()))
                 //.peek(tx -> tx.setHash(Objects.toString(Long.hashCode(tx.getTimestamp()))))
-                .peek(tx -> tx.setHash(prefix + counter.get()))
+                .peek(tx -> tx.setHash(prefix + "_" + tag + "_" + counter.get()))
                 .peek(tx -> tx.setBundle(tx.getHash()))
+                .peek(tx -> tx.setTag(tag))
                 // make counter incremental for debugging purposes
                 .peek(tx -> tx.setCurrentIndex(counter.getAndIncrement()))
                 .collect(Collectors.toList());
+    }
+
+    private List<jota.model.Transaction> createTxs(Instant reference, int offset, int n, int delta) {
+        return createTxs(reference, offset, n, delta, "TAG");
     }
 
     @After
@@ -174,7 +186,8 @@ public class TransactionPollerTest {
         options = EnumSet.of(PROVIDED);
 
         Instant adjustedThreshold = pushThreshold.minus(slidingWindow);
-        List<jota.model.Transaction> txs = createTxs(adjustedThreshold, 0, hashCacheSize, 1);
+        List<jota.model.Transaction> txs = createTxs(adjustedThreshold, 0, hashCacheSize, 1, "A");
+
         returnedTransactions.addAll(txs);
         returnedTransactions.addAll(txs);
 
@@ -184,16 +197,20 @@ public class TransactionPollerTest {
         Assert.assertThat("no duplicate element", queue.size(), is(new HashSet<>(queue).size()));
 
         returnedTransactions.clear();
-        returnedTransactions.addAll(createTxs(adjustedThreshold, hashCacheSize, 1, 1));
         // add (n+1)-th unique element for LRU strategy to kick in (n = hashCacheSize)
+        // NEW_A_25
+        returnedTransactions.addAll(createTxs(adjustedThreshold, hashCacheSize, 1, 1, "A"));
+
         poller.run();
         Assert.assertThat("queue size unexpected", queue, hasSize(1 + hashCacheSize));
         Assert.assertThat("no duplicate element", queue.size(), is(new HashSet<>(queue).size()));
 
         returnedTransactions.clear();
+
         returnedTransactions.add(txs.get(0));
         // add first element again
         poller.run();
+
         Assert.assertThat("queue size unexpected", queue, hasSize(2 + hashCacheSize));
         Assert.assertThat("has duplicate element", queue.size() - 1, is(new HashSet<>(queue).size()));
         Assert.assertThat("no old tx", txsBeforePushThreshold, is(empty()));
@@ -205,7 +222,8 @@ public class TransactionPollerTest {
 
         int n = 100;
         Instant adjustedThreshold = pushThreshold.minus(slidingWindow);
-        List<jota.model.Transaction> txs = createTxs(adjustedThreshold, 0, n, -1);
+        List<jota.model.Transaction> txs = createTxs(adjustedThreshold, 0, n, -1, "A");
+
         returnedTransactions.addAll(txs);
         returnedTransactions.addAll(txs);
 
@@ -213,6 +231,37 @@ public class TransactionPollerTest {
         Assert.assertThat("queue size unexpected", txsBeforePushThreshold, hasSize(n));
         Set<Transaction<jota.model.Transaction>> set = new HashSet<>(txsBeforePushThreshold);
         Assert.assertThat("no duplicate elements", txsBeforePushThreshold.size(), is(set.size()));
+    }
+
+    @Test
+    public void testOldTxTagSwitch() throws Exception {
+        options = EnumSet.of(PROVIDED);
+
+        int n = 50;
+        Instant adjustedThreshold = pushThreshold.minus(slidingWindow);
+        returnedTransactions.addAll(createTxs(adjustedThreshold, 0, n, -1, "A"));
+        returnedTransactions.addAll(createTxs(adjustedThreshold, 0, n, +1, "A"));
+
+        poller.run();
+        returnedTransactions.clear();
+        Assert.assertThat("queue size unexpected", txsBeforePushThreshold, hasSize(n));
+        Assert.assertThat("queue size unexpected", queue, hasSize(n));
+        queue.clear();
+        txsBeforePushThreshold.clear();
+
+        n = 50;
+        // A should be irrelevant, because txs are below threshold
+        returnedTransactions.addAll(createTxs(adjustedThreshold, n, 2 * n, -1, "A"));
+
+        String newTag = "B";
+        returnedTransactions.addAll(createTxs(adjustedThreshold, 0, n, -1, newTag));
+
+        tags.add(newTag); // simulate change of listener set
+        poller.tagChanged(new TagChangeEvent(Collections.emptySet(), newTag, TagChangeAction.ADD));
+
+        poller.run();
+        Assert.assertThat("old tx size unexpected", txsBeforePushThreshold, hasSize(n));
+        Assert.assertThat("queue size unexpected", queue, hasSize(0));
     }
 
     @Test

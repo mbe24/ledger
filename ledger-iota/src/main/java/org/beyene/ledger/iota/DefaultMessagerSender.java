@@ -5,7 +5,6 @@ import jota.model.Bundle;
 import jota.utils.Constants;
 import org.apache.commons.lang3.StringUtils;
 import org.beyene.ledger.api.Format;
-import org.beyene.ledger.api.Mapper;
 import org.beyene.ledger.api.Serializer;
 import org.beyene.ledger.api.Transaction;
 import org.beyene.ledger.iota.util.Iota;
@@ -34,7 +33,7 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
     private final int depth;
     private final int minWeightMagnitude;
 
-    public DefaultMessagerSender(Builder builder) {
+    public DefaultMessagerSender(Builder<M, D> builder) {
         this.api = builder.api;
         this.format = builder.format;
         this.serializer = builder.serializer;
@@ -88,8 +87,9 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
 
         List<jota.model.Transaction> transactions = bundle.getTransactions();
         Collections.reverse(transactions);
-        String[] txTrytes = transactions.stream().map(jota.model.Transaction::toTrytes).toArray(String[]::new);
-        return txTrytes;
+        return transactions.stream()
+                .map(jota.model.Transaction::toTrytes)
+                .toArray(String[]::new);
     }
 
     private String toTrytes(D serialized) {
@@ -148,43 +148,43 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
         private int depth;
         private int minWeightMagnitude;
 
-        public Builder setApi(Iota api) {
+        public Builder<M, D> setApi(Iota api) {
             this.api = api;
             return this;
         }
 
-        public Builder setFormat(Format<D> format) {
+        public Builder<M, D> setFormat(Format<D> format) {
             this.format = format;
             return this;
         }
 
-        public Builder setSerializer(Serializer<M, D> serializer) {
+        public Builder<M, D> setSerializer(Serializer<M, D> serializer) {
             this.serializer = serializer;
             return this;
         }
 
-        public Builder setAddress(String address) {
+        public Builder<M, D> setAddress(String address) {
             this.address = address;
             return this;
         }
 
-        public Builder setUseConfiguredAddress(boolean useConfiguredAddress) {
+        public Builder<M, D> setUseConfiguredAddress(boolean useConfiguredAddress) {
             this.useConfiguredAddress = useConfiguredAddress;
             return this;
         }
 
-        public Builder setTipAnalysisDepth(int depth) {
+        public Builder<M, D> setTipAnalysisDepth(int depth) {
             this.depth = depth;
             return this;
         }
 
-        public Builder setMinWeightMagnitude(int minWeightMagnitude) {
+        public Builder<M, D> setMinWeightMagnitude(int minWeightMagnitude) {
             this.minWeightMagnitude = minWeightMagnitude;
             return this;
         }
 
-        public DefaultMessagerSender build() {
-            return new DefaultMessagerSender(this);
+        public DefaultMessagerSender<M, D> build() {
+            return new DefaultMessagerSender<>(this);
         }
     }
 }

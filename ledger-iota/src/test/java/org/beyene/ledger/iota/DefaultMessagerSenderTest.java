@@ -131,7 +131,7 @@ public class DefaultMessagerSenderTest {
                 .setApi(api)
                 // setting unsupported format leads to illegal state exception
                 .setFormat(() -> Void.class)
-                .setSerializer(s -> s)
+                .setSerializer(s -> {return null;})
                 .build();
         sender.addTransaction(new MessageTransaction<>("ID", Instant.now(), "TAG", "This is how we do"));
     }

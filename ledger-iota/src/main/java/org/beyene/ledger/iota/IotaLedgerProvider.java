@@ -13,6 +13,7 @@ import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -61,12 +62,14 @@ public class IotaLedgerProvider implements LedgerProvider {
         setNumber(properties.get("ledger.receive.hash.cache"), Number::intValue, builder::setHashCacheSize);
         setNumber(properties.get("ledger.fragments.alive"), Number::intValue, builder::setKeepFragmentsAlive);
 
-        MessageSender<M> messageSender = new DefaultMessagerSender.Builder()
+        MessageSender<M> messageSender = new DefaultMessagerSender.Builder<M, D>()
                 .setApi(api)
                 .setFormat(format)
                 .setSerializer(mapper)
                 .setTipAnalysisDepth(3)
                 .setMinWeightMagnitude(13)
+                // TODO
+                // what about the address
                 //.setAddress("")
                 .setUseConfiguredAddress(false)
                 .build();
@@ -78,6 +81,7 @@ public class IotaLedgerProvider implements LedgerProvider {
                 .setMapper(mapper)
                 .setListeners(listeners)
                 .setListenerThreads(2)
+                .setPushThreshold(Instant.now())
                 .build();
     }
 

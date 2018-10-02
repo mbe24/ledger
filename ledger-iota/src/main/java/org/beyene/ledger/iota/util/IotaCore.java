@@ -5,6 +5,7 @@ import jota.error.ArgumentException;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public interface IotaCore {
     GetNodeInfoResponse getNodeInfo();
 
