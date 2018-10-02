@@ -84,6 +84,8 @@ public class TransactionPollerTest {
         this.oldTxsConsumer = txsBeforePushThreshold::addAll;
 
         Map<String, Boolean> knownHashes = new LinkedHashMap<String, Boolean>() {
+            private static final long serialVersionUID = 1L;
+
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
                 return size() > hashCacheSize;
