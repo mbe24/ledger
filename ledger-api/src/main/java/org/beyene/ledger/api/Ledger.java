@@ -44,10 +44,6 @@ public interface Ledger<M, D> extends AutoCloseable {
      */
     boolean removeTransactionListener(String tag);
 
-    // TODO
-    // think about using multiple listeners per tag
-    // utilize TransactionListenerManager
-
     /**
      * @return
      */
@@ -57,9 +53,6 @@ public interface Ledger<M, D> extends AutoCloseable {
      * @return
      */
     Format<D> getFormat();
-
-    // update configuration
-    // necessary now that TransactionListener is added?
 
     @Override
     void close() throws IOException;
