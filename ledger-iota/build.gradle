@@ -1,6 +1,3 @@
-group 'org.beyene.ledger'
-version '1.0'
-
 repositories {
     maven { url 'https://jitpack.io' }
     mavenCentral()
@@ -10,4 +7,9 @@ dependencies {
     compile project(':ledger-api')
     compile 'com.github.iotaledger:iota~lib~java:0.9.10'
     compile 'com.google.guava:guava:26.0-jre'
+}
+
+jar {
+    from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
 }
