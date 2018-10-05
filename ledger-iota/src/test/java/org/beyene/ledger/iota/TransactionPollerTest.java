@@ -163,7 +163,7 @@ public class TransactionPollerTest {
                 .sequential()
                 .boxed()
                 .map(i -> threshold.plusSeconds(delta * i))
-                .map(timestamp -> new jota.model.Transaction("ADDRESS", 0, tag, timestamp.toEpochMilli()))
+                .map(timestamp -> new jota.model.Transaction("ADDRESS", 0, tag, timestamp.toEpochMilli() / 1000))
                 //.peek(tx -> tx.setHash(Objects.toString(Long.hashCode(tx.getTimestamp()))))
                 .peek(tx -> tx.setHash(prefix + "_" + tag + "_" + counter.get()))
                 .peek(tx -> tx.setBundle(tx.getHash()))

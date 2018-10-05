@@ -123,7 +123,7 @@ public class TransactionPoller implements Runnable, TagChangeListener {
         return transactions.stream()
                 .filter(tx -> tx.getTimestamp() > 0)
                 .filter(tx -> !knownHashes.containsKey(tx.getHash()))
-                .collect(Collectors.groupingBy(tx -> Instant.ofEpochMilli(tx.getTimestamp()).isAfter(reference)));
+                .collect(Collectors.groupingBy(tx -> Instant.ofEpochMilli(1_000 * tx.getTimestamp()).isAfter(reference)));
     }
 
     private void updatePushThreshold(List<jota.model.Transaction> newTransactions) {
@@ -233,7 +233,7 @@ public class TransactionPoller implements Runnable, TagChangeListener {
 
         @Override
         public Instant getTimestamp() {
-            return Instant.ofEpochMilli(delegate.getTimestamp());
+            return Instant.ofEpochMilli(1_000 * delegate.getTimestamp());
         }
 
         @Override
