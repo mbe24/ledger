@@ -42,7 +42,7 @@ public class DefaultMessagerSenderTest {
                 throw new ArgumentException("exception for unit test");
 
             return Collections.emptyList();
-        }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class));
+        }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class), isNull());
 
         this.sender = new DefaultMessagerSender.Builder<String, String>()
                 .setApi(api)

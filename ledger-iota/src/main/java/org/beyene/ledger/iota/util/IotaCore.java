@@ -5,43 +5,46 @@ import jota.error.ArgumentException;
 
 import java.util.List;
 
-@SuppressWarnings("unused")
 public interface IotaCore {
-    GetNodeInfoResponse getNodeInfo();
+    GetNodeInfoResponse getNodeInfo() throws ArgumentException;
 
-    GetNeighborsResponse getNeighbors();
+    GetNeighborsResponse getNeighbors() throws ArgumentException;
 
-    AddNeighborsResponse addNeighbors(String... uris);
+    AddNeighborsResponse addNeighbors(String... uris) throws ArgumentException;
 
-    RemoveNeighborsResponse removeNeighbors(String... uris);
+    RemoveNeighborsResponse removeNeighbors(String... uris) throws ArgumentException;
 
-    GetTipsResponse getTips();
+    GetTipsResponse getTips() throws ArgumentException;
 
-    FindTransactionResponse findTransactions(String[] addresses, String[] tags, String[] approvees, String[] bundles);
+    FindTransactionResponse findTransactions(String[] addresses, String[] tags, String[] approvees, String[] bundles) throws ArgumentException;
 
     FindTransactionResponse findTransactionsByAddresses(String... addresses) throws ArgumentException;
 
-    FindTransactionResponse findTransactionsByBundles(String... bundles);
+    FindTransactionResponse findTransactionsByBundles(String... bundles) throws ArgumentException;
 
-    FindTransactionResponse findTransactionsByApprovees(String... approvees);
+    FindTransactionResponse findTransactionsByApprovees(String... approvees) throws ArgumentException;
 
-    FindTransactionResponse findTransactionsByDigests(String... digests);
+    FindTransactionResponse findTransactionsByDigests(String... digests) throws ArgumentException;
 
     GetInclusionStateResponse getInclusionStates(String[] transactions, String[] tips) throws ArgumentException;
 
     GetTrytesResponse getTrytes(String... hashes) throws ArgumentException;
 
-    GetTransactionsToApproveResponse getTransactionsToApprove(int depth);
+    GetTransactionsToApproveResponse getTransactionsToApprove(int depth, String reference) throws ArgumentException;
+
+    GetTransactionsToApproveResponse getTransactionsToApprove(int depth) throws ArgumentException;
 
     GetBalancesResponse getBalances(int threshold, List<String> addresses) throws ArgumentException;
 
+    GetBalancesResponse getBalances(int threshold, List<String> addresses, List<String> tips) throws ArgumentException;
+
     GetAttachToTangleResponse attachToTangle(String trunkTransaction, String branchTransaction, int minWeightMagnitude, String... trytes) throws ArgumentException;
 
-    InterruptAttachingToTangleResponse interruptAttachingToTangle();
+    InterruptAttachingToTangleResponse interruptAttachingToTangle() throws ArgumentException;
 
     BroadcastTransactionsResponse broadcastTransactions(String... trytes) throws ArgumentException;
 
-    StoreTransactionsResponse storeTransactions(String... trytes);
+    StoreTransactionsResponse storeTransactions(String... trytes) throws ArgumentException;
 
     String getProtocol();
 

@@ -5,7 +5,7 @@ repositories {
 
 dependencies {
     compile project(':ledger-api')
-    compile 'com.github.iotaledger:iota~lib~java:0.9.10'
+    compile 'com.github.iotaledger:iota-java:1.0.0-beta1'
     compile 'com.google.guava:guava:26.0-jre'
 }
 

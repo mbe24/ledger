@@ -54,7 +54,8 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
         String[] txTrytes = createTransactionTrytes(signatureFragments, transaction, timestamp);
 
         try {
-            api.sendTrytes(txTrytes, depth, minWeightMagnitude);
+            String reference = null;
+            api.sendTrytes(txTrytes, depth, minWeightMagnitude, reference);
         } catch (ArgumentException e) {
             LOGGER.log(Level.INFO, e.toString(), e);
             throw new IOException("Sending transaction failed", e);

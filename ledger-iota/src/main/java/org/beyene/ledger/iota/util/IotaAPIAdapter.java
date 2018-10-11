@@ -11,7 +11,6 @@ import jota.utils.StopWatch;
 
 import java.util.List;
 
-@SuppressWarnings("unused")
 public class IotaAPIAdapter implements Iota {
 
     private final IotaAPI delegate;
@@ -41,8 +40,8 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public List<Transaction> sendTrytes(String[] trytes, int depth, int minWeightMagnitude) throws ArgumentException {
-        return delegate.sendTrytes(trytes, depth, minWeightMagnitude);
+    public List<Transaction> sendTrytes(String[] trytes, int depth, int minWeightMagnitude, String reference) throws ArgumentException {
+        return delegate.sendTrytes(trytes, depth, minWeightMagnitude, reference);
     }
 
     @Override
@@ -71,18 +70,18 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public List<String> prepareTransfers(String seed, int security, List<Transfer> transfers, String remainder, List<Input> inputs, boolean validateInputs) throws ArgumentException {
-        return delegate.prepareTransfers(seed, security, transfers, remainder, inputs, validateInputs);
+    public List<String> prepareTransfers(String seed, int security, final List<Transfer> transfers, String remainder, List<Input> inputs, List<Transaction> tips, boolean validateInputs) throws ArgumentException {
+        return delegate.prepareTransfers(seed, security, transfers, remainder, inputs, tips, validateInputs);
     }
 
     @Override
-    public GetBalancesAndFormatResponse getInputs(String seed, int security, int start, int end, long threshold) throws ArgumentException {
+    public GetBalancesAndFormatResponse getInputs(String seed, int security, int start, int end, long threshold, final String... tips) throws ArgumentException {
         return delegate.getInputs(seed, security, start, end, threshold);
     }
 
     @Override
-    public GetBalancesAndFormatResponse getBalanceAndFormat(List<String> addresses, long threshold, int start, StopWatch stopWatch, int security) throws ArgumentException, IllegalStateException {
-        return delegate.getBalanceAndFormat(addresses, threshold, start, stopWatch, security);
+    public GetBalancesAndFormatResponse getBalanceAndFormat(final List<String> addresses, final List<String> tips, long threshold, int start, StopWatch stopWatch, int security) throws ArgumentException, IllegalStateException {
+        return delegate.getBalanceAndFormat(addresses, tips, threshold, start, stopWatch, security);
     }
 
     @Override
@@ -96,8 +95,8 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public ReplayBundleResponse replayBundle(String transaction, int depth, int minWeightMagnitude) throws ArgumentException {
-        return delegate.replayBundle(transaction, depth, minWeightMagnitude);
+    public ReplayBundleResponse replayBundle(String tailTransactionHash, int depth, int minWeightMagnitude, String reference) throws ArgumentException {
+        return delegate.replayBundle(tailTransactionHash, depth, minWeightMagnitude, reference);
     }
 
     @Override
@@ -106,8 +105,8 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public SendTransferResponse sendTransfer(String seed, int security, int depth, int minWeightMagnitude, List<Transfer> transfers, List<Input> inputs, String remainderAddress, boolean validateInputs) throws ArgumentException {
-        return delegate.sendTransfer(seed, security, depth, minWeightMagnitude, transfers, inputs, remainderAddress, validateInputs);
+    public SendTransferResponse sendTransfer(String seed, int security, int depth, int minWeightMagnitude, final List<Transfer> transfers, List<Input> inputs, String remainderAddress, boolean validateInputs, boolean validateInputAddresses, final List<Transaction> tips) throws ArgumentException {
+        return delegate.sendTransfer(seed, security, depth, minWeightMagnitude, transfers, inputs, remainderAddress, validateInputs, validateInputAddresses, tips);
     }
 
     @Override
@@ -121,37 +120,42 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
+    public void validateTransfersAddresses(String seed, int security, List<String> trytes) throws ArgumentException {
+        delegate.validateTransfersAddresses(seed, security, trytes);
+    }
+
+    @Override
     public List<String> addRemainder(String seed, int security, List<Input> inputs, Bundle bundle, String tag, long totalValue, String remainderAddress, List<String> signatureFragments) throws ArgumentException {
         return delegate.addRemainder(seed, security, inputs, bundle, tag, totalValue, remainderAddress, signatureFragments);
     }
 
     @Override
-    public GetNodeInfoResponse getNodeInfo() {
+    public GetNodeInfoResponse getNodeInfo() throws ArgumentException {
         return delegate.getNodeInfo();
     }
 
     @Override
-    public GetNeighborsResponse getNeighbors() {
+    public GetNeighborsResponse getNeighbors() throws ArgumentException {
         return delegate.getNeighbors();
     }
 
     @Override
-    public AddNeighborsResponse addNeighbors(String... uris) {
+    public AddNeighborsResponse addNeighbors(String... uris) throws ArgumentException {
         return delegate.addNeighbors(uris);
     }
 
     @Override
-    public RemoveNeighborsResponse removeNeighbors(String... uris) {
+    public RemoveNeighborsResponse removeNeighbors(String... uris) throws ArgumentException {
         return delegate.removeNeighbors(uris);
     }
 
     @Override
-    public GetTipsResponse getTips() {
+    public GetTipsResponse getTips() throws ArgumentException {
         return delegate.getTips();
     }
 
     @Override
-    public FindTransactionResponse findTransactions(String[] addresses, String[] tags, String[] approvees, String[] bundles) {
+    public FindTransactionResponse findTransactions(String[] addresses, String[] tags, String[] approvees, String[] bundles) throws ArgumentException {
         return delegate.findTransactions(addresses, tags, approvees, bundles);
     }
 
@@ -161,17 +165,17 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public FindTransactionResponse findTransactionsByBundles(String... bundles) {
+    public FindTransactionResponse findTransactionsByBundles(String... bundles) throws ArgumentException {
         return delegate.findTransactionsByBundles(bundles);
     }
 
     @Override
-    public FindTransactionResponse findTransactionsByApprovees(String... approvees) {
+    public FindTransactionResponse findTransactionsByApprovees(String... approvees) throws ArgumentException {
         return delegate.findTransactionsByApprovees(approvees);
     }
 
     @Override
-    public FindTransactionResponse findTransactionsByDigests(String... digests) {
+    public FindTransactionResponse findTransactionsByDigests(String... digests) throws ArgumentException {
         return delegate.findTransactionsByDigests(digests);
     }
 
@@ -186,8 +190,18 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public GetTransactionsToApproveResponse getTransactionsToApprove(int depth) {
+    public GetTransactionsToApproveResponse getTransactionsToApprove(int depth, String reference) throws ArgumentException {
+        return delegate.getTransactionsToApprove(depth, reference);
+    }
+
+    @Override
+    public GetTransactionsToApproveResponse getTransactionsToApprove(int depth) throws ArgumentException {
         return delegate.getTransactionsToApprove(depth);
+    }
+
+    @Override
+    public GetBalancesResponse getBalances(int threshold, List<String> addresses, List<String> tips) throws ArgumentException {
+        return delegate.getBalances(threshold, addresses, tips);
     }
 
     @Override
@@ -201,7 +215,7 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public InterruptAttachingToTangleResponse interruptAttachingToTangle() {
+    public InterruptAttachingToTangleResponse interruptAttachingToTangle() throws ArgumentException {
         return delegate.interruptAttachingToTangle();
     }
 
@@ -211,7 +225,7 @@ public class IotaAPIAdapter implements Iota {
     }
 
     @Override
-    public StoreTransactionsResponse storeTransactions(String... trytes) {
+    public StoreTransactionsResponse storeTransactions(String... trytes) throws ArgumentException {
         return delegate.storeTransactions(trytes);
     }
 

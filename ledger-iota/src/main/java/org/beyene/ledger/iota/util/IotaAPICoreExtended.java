@@ -34,7 +34,6 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@SuppressWarnings(value = {"unchecked", "rawtypes"})
 public class IotaAPICoreExtended implements IotaCore {
 
     private static final Logger log = LoggerFactory.getLogger(IotaAPICoreExtended.class);
@@ -45,7 +44,7 @@ public class IotaAPICoreExtended implements IotaCore {
     private String port;
     private IotaLocalPoW localPoW;
 
-    protected IotaAPICoreExtended(IotaAPICoreExtended.Builder builder) {
+    protected <T extends IotaAPICoreExtended.Builder<T>> IotaAPICoreExtended(IotaAPICoreExtended.Builder<T> builder) {
         this.protocol = builder.protocol;
         this.host = builder.host;
         this.port = builder.port;
@@ -97,10 +96,10 @@ public class IotaAPICoreExtended implements IotaCore {
         }
     }
 
-    protected IotaAPIService constructService(String protocol, InetSocketAddress socket, Consumer<OkHttpClient.Builder> httpClientModifier) {
+    protected IotaAPIService constructService(String protocol, InetSocketAddress socket, Consumer<okhttp3.OkHttpClient.Builder> httpClientModifier) {
         String nodeUrl = protocol + "://" + socket.getHostString() + ":" + socket.getPort();
 
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        okhttp3.OkHttpClient.Builder builder = new okhttp3.OkHttpClient.Builder();
         httpClientModifier.accept(builder);
 
         OkHttpClient client = builder
@@ -111,7 +110,7 @@ public class IotaAPICoreExtended implements IotaCore {
                     return chain.proceed(newRequest);
                 })
                 .connectTimeout(5000L, TimeUnit.SECONDS).build();
-        Retrofit retrofit = (new Retrofit.Builder()).baseUrl(nodeUrl).addConverterFactory(GsonConverterFactory.create()).client(client).build();
+        Retrofit retrofit = (new retrofit2.Retrofit.Builder()).baseUrl(nodeUrl).addConverterFactory(GsonConverterFactory.create()).client(client).build();
 
         log.debug("Jota-API Java proxy pointing to node url: \'{}\'", nodeUrl);
         return retrofit.create(IotaAPIService.class);
@@ -119,39 +118,39 @@ public class IotaAPICoreExtended implements IotaCore {
 
     @Override
     public GetNodeInfoResponse getNodeInfo() {
-        Call res = this.service.getNodeInfo(IotaCommandRequest.createNodeInfoRequest());
-        return (GetNodeInfoResponse) wrapCheckedException(res).body();
+        Call<GetNodeInfoResponse> res = this.service.getNodeInfo(IotaCommandRequest.createNodeInfoRequest());
+        return wrapCheckedException(res).body();
     }
 
     @Override
     public GetNeighborsResponse getNeighbors() {
-        Call res = this.service.getNeighbors(IotaCommandRequest.createGetNeighborsRequest());
-        return (GetNeighborsResponse) wrapCheckedException(res).body();
+        Call<GetNeighborsResponse> res = this.service.getNeighbors(IotaCommandRequest.createGetNeighborsRequest());
+        return wrapCheckedException(res).body();
     }
 
     @Override
     public AddNeighborsResponse addNeighbors(String... uris) {
-        Call res = this.service.addNeighbors(IotaNeighborsRequest.createAddNeighborsRequest(uris));
-        return (AddNeighborsResponse) wrapCheckedException(res).body();
+        Call<AddNeighborsResponse> res = this.service.addNeighbors(IotaNeighborsRequest.createAddNeighborsRequest(uris));
+        return wrapCheckedException(res).body();
     }
 
     @Override
     public RemoveNeighborsResponse removeNeighbors(String... uris) {
-        Call res = this.service.removeNeighbors(IotaNeighborsRequest.createRemoveNeighborsRequest(uris));
-        return (RemoveNeighborsResponse) wrapCheckedException(res).body();
+        Call<RemoveNeighborsResponse> res = this.service.removeNeighbors(IotaNeighborsRequest.createRemoveNeighborsRequest(uris));
+        return wrapCheckedException(res).body();
     }
 
     @Override
     public GetTipsResponse getTips() {
-        Call res = this.service.getTips(IotaCommandRequest.createGetTipsRequest());
-        return (GetTipsResponse) wrapCheckedException(res).body();
+        Call<GetTipsResponse> res = this.service.getTips(IotaCommandRequest.createGetTipsRequest());
+        return wrapCheckedException(res).body();
     }
 
     @Override
     public FindTransactionResponse findTransactions(String[] addresses, String[] tags, String[] approvees, String[] bundles) {
         IotaFindTransactionsRequest findTransRequest = IotaFindTransactionsRequest.createFindTransactionRequest().byAddresses(addresses).byTags(tags).byApprovees(approvees).byBundles(bundles);
-        Call res = this.service.findTransactions(findTransRequest);
-        return (FindTransactionResponse) wrapCheckedException(res).body();
+        Call<FindTransactionResponse> res = this.service.findTransactions(findTransRequest);
+        return wrapCheckedException(res).body();
     }
 
     @Override
@@ -188,8 +187,8 @@ public class IotaAPICoreExtended implements IotaCore {
         } else if (!InputValidator.isArrayOfHashes(tips)) {
             throw new ArgumentException("Invalid hashes provided.");
         } else {
-            Call res = this.service.getInclusionStates(IotaGetInclusionStateRequest.createGetInclusionStateRequest(transactions, tips));
-            return (GetInclusionStateResponse) wrapCheckedException(res).body();
+            Call<GetInclusionStateResponse> res = this.service.getInclusionStates(IotaGetInclusionStateRequest.createGetInclusionStateRequest(transactions, tips));
+            return wrapCheckedException(res).body();
         }
     }
 
@@ -198,32 +197,65 @@ public class IotaAPICoreExtended implements IotaCore {
         if (!InputValidator.isArrayOfHashes(hashes)) {
             throw new ArgumentException("Invalid hashes provided.");
         } else {
-            Call res = this.service.getTrytes(IotaGetTrytesRequest.createGetTrytesRequest(hashes));
-            return (GetTrytesResponse) wrapCheckedException(res).body();
+            Call<GetTrytesResponse> res = this.service.getTrytes(IotaGetTrytesRequest.createGetTrytesRequest(hashes));
+            return wrapCheckedException(res).body();
         }
     }
 
     @Override
     public GetTransactionsToApproveResponse getTransactionsToApprove(int depth) {
-        Call res = this.service.getTransactionsToApprove(IotaGetTransactionsToApproveRequest.createIotaGetTransactionsToApproveRequest(depth));
-        return (GetTransactionsToApproveResponse) wrapCheckedException(res).body();
-    }
-
-    private GetBalancesResponse getBalances(int threshold, String[] addresses) {
-        Call res = this.service.getBalances(IotaGetBalancesRequest.createIotaGetBalancesRequest(threshold, addresses));
-        return (GetBalancesResponse) wrapCheckedException(res).body();
+        return getTransactionsToApprove(depth, null);
     }
 
     @Override
-    public GetBalancesResponse getBalances(int threshold, List<String> addresses) throws ArgumentException {
+    public GetTransactionsToApproveResponse getTransactionsToApprove(int depth, String reference) {
+        Call<GetTransactionsToApproveResponse> res = this.service.getTransactionsToApprove(IotaGetTransactionsToApproveRequest.createIotaGetTransactionsToApproveRequest(depth, reference));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The array list of addresses you want to get the confirmed balance from.
+     * @param tips      The starting points we walk back from to find the balance of the addresses
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     * @throws ArgumentException
+     */
+    private GetBalancesResponse getBalances(int threshold, String[] addresses, String[] tips) throws ArgumentException {
+        final Call<GetBalancesResponse> res = service.getBalances(IotaGetBalancesRequest.createIotaGetBalancesRequest(threshold, addresses, tips));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The list of addresses you want to get the confirmed balance from.
+     * @param tips      The starting points we walk back from to find the balance of the addresses
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     */
+    public GetBalancesResponse getBalances(int threshold, List<String> addresses, List<String> tips) throws ArgumentException {
+
         List<String> addressesWithoutChecksum = new ArrayList<>();
 
         for (String address : addresses) {
             String addressO = Checksum.removeChecksum(address);
             addressesWithoutChecksum.add(addressO);
         }
+        String[] tipsArray = tips != null ? tips.toArray(new String[]{}) : null;
+        return getBalances(threshold, addressesWithoutChecksum.toArray(new String[]{}), tipsArray);
+    }
 
-        return this.getBalances(threshold, addressesWithoutChecksum.toArray(new String[addressesWithoutChecksum.size()]));
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The list of addresses you want to get the confirmed balance from.
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     */
+    public GetBalancesResponse getBalances(int threshold, List<String> addresses) throws ArgumentException {
+        return getBalances(threshold, addresses, null);
     }
 
     @Override
@@ -235,8 +267,8 @@ public class IotaAPICoreExtended implements IotaCore {
         } else if (!InputValidator.isArrayOfTrytes(trytes)) {
             throw new ArgumentException("Invalid trytes provided.");
         } else if (this.localPoW == null) {
-            Call var9 = this.service.attachToTangle(IotaAttachToTangleRequest.createAttachToTangleRequest(trunkTransaction, branchTransaction, minWeightMagnitude, trytes));
-            return (GetAttachToTangleResponse) wrapCheckedException(var9).body();
+            Call<GetAttachToTangleResponse> var9 = this.service.attachToTangle(IotaAttachToTangleRequest.createAttachToTangleRequest(trunkTransaction, branchTransaction, minWeightMagnitude, trytes));
+            return wrapCheckedException(var9).body();
         } else {
             String[] res = new String[trytes.length];
             String previousTransaction = null;
@@ -262,8 +294,8 @@ public class IotaAPICoreExtended implements IotaCore {
 
     @Override
     public InterruptAttachingToTangleResponse interruptAttachingToTangle() {
-        Call res = this.service.interruptAttachingToTangle(IotaCommandRequest.createInterruptAttachToTangleRequest());
-        return (InterruptAttachingToTangleResponse) wrapCheckedException(res).body();
+        Call<InterruptAttachingToTangleResponse> res = this.service.interruptAttachingToTangle(IotaCommandRequest.createInterruptAttachToTangleRequest());
+        return wrapCheckedException(res).body();
     }
 
     @Override
@@ -271,15 +303,15 @@ public class IotaAPICoreExtended implements IotaCore {
         if (!InputValidator.isArrayOfAttachedTrytes(trytes)) {
             throw new ArgumentException("Invalid attached trytes provided.");
         } else {
-            Call res = this.service.broadcastTransactions(IotaBroadcastTransactionRequest.createBroadcastTransactionsRequest(trytes));
-            return (BroadcastTransactionsResponse) wrapCheckedException(res).body();
+            Call<BroadcastTransactionsResponse> res = this.service.broadcastTransactions(IotaBroadcastTransactionRequest.createBroadcastTransactionsRequest(trytes));
+            return wrapCheckedException(res).body();
         }
     }
 
     @Override
     public StoreTransactionsResponse storeTransactions(String... trytes) {
-        Call res = this.service.storeTransactions(IotaStoreTransactionsRequest.createStoreTransactionsRequest(trytes));
-        return (StoreTransactionsResponse) wrapCheckedException(res).body();
+        Call<StoreTransactionsResponse> res = this.service.storeTransactions(IotaStoreTransactionsRequest.createStoreTransactionsRequest(trytes));
+        return wrapCheckedException(res).body();
     }
 
     @Override
@@ -297,17 +329,22 @@ public class IotaAPICoreExtended implements IotaCore {
         return this.port;
     }
 
-    @SuppressWarnings("unchecked")
     public static class Builder<T extends IotaAPICoreExtended.Builder<T>> {
         protected String protocol;
         protected String host;
         protected String port;
         protected IotaLocalPoW localPoW;
-        protected Consumer<OkHttpClient.Builder> httpClientModifier = b -> {};
+        protected Consumer<okhttp3.OkHttpClient.Builder> httpClientModifier = builder -> {
+        };
 
         private FileReader fileReader = null;
         private BufferedReader bufferedReader = null;
         private Properties nodeConfig = null;
+
+        @SuppressWarnings("unchecked")
+        public T self() {
+            return (T) this;
+        }
 
         public IotaAPICoreExtended build() {
             readConfigIfNotSet();
@@ -353,39 +390,38 @@ public class IotaAPICoreExtended implements IotaCore {
                 this.port = this.getFromConfigurationOrEnvironment("iota.node.port", "IOTA_NODE_PORT", "14265");
             }
 
-            return (T) this;
+            return self();
         }
 
-        @SuppressWarnings("unused")
         public T config(Properties properties) {
             this.nodeConfig = properties;
-            return (T) this;
+            return self();
         }
 
         public T host(String host) {
             this.host = host;
-            return (T) this;
+            return self();
         }
 
         public T port(String port) {
             this.port = port;
-            return (T) this;
+            return self();
         }
 
         public T protocol(String protocol) {
             this.protocol = protocol;
-            return (T) this;
+            return self();
         }
 
         public T localPoW(IotaLocalPoW localPoW) {
             this.localPoW = localPoW;
-            return (T) this;
+            return self();
         }
 
-        public T httpClientModifier(Consumer<OkHttpClient.Builder> httpClientModifier) {
+        public T httpClientModifier(Consumer<okhttp3.OkHttpClient.Builder> httpClientModifier) {
             Objects.requireNonNull(httpClientModifier);
             this.httpClientModifier = httpClientModifier;
-            return (T) this;
+            return self();
         }
     }
 }

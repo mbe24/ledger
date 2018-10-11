@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
@@ -41,7 +42,7 @@ public class MessageParserTest {
         doAnswer(invocation -> {
             Stream.of(invocation.<String[]>getArgument(0)).forEach(transactionTrytes::add);
             return Collections.emptyList();
-        }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class));
+        }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class), isNull());
 
         this.sender = new DefaultMessagerSender.Builder<String, String>()
                 .setApi(api)
