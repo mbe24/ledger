@@ -20,13 +20,16 @@ public class FileLedger<M, D> implements Ledger<M, D> {
 
     private static final Logger LOGGER = Logger.getLogger(FileLedger.class.getName());
 
-    private final Mapper<M, D> mapper;
+    private final Serializer<M, D> serializer;
+    private final Deserializer<M, D> deserializer;
     private final Format<D> format;
     private final Path directory;
     private final AtomicInteger counter;
 
-    public FileLedger(Mapper<M, D> mapper, Format<D> format, Path directory) {
-        this.mapper = mapper;
+    public FileLedger(Serializer<M, D> serializer,
+                      Deserializer<M, D> deserializer, Format<D> format, Path directory) {
+        this.serializer = serializer;
+        this.deserializer = deserializer;
         this.format = format;
         this.directory = directory;
         this.counter = new AtomicInteger(determineMaxCounter());
@@ -59,7 +62,7 @@ public class FileLedger<M, D> implements Ledger<M, D> {
         Path path = createFile();
 
         M message = transaction.getObject();
-        D serialized = mapper.serialize(message);
+        D serialized = serializer.serialize(message);
         write(path, serialized);
 
         return fromMessage(message);
@@ -120,7 +123,7 @@ public class FileLedger<M, D> implements Ledger<M, D> {
             }
 
             D data = format.getType().cast(object);
-            message = mapper.deserialize(data);
+            message = deserializer.deserialize(data);
         } catch (IOException e) {
             LOGGER.log(Level.INFO, e.toString(), e);
             throw new IllegalStateException("Writing tx failed", e);
@@ -142,7 +145,7 @@ public class FileLedger<M, D> implements Ledger<M, D> {
 
         return files.stream()
                 .map(this::read)
-                .map(m -> fromMessage(m))
+                .map(this::fromMessage)
                 //.filter(tx -> tx.getTimestamp().isAfter(since))
                 //.filter(tx -> tx.getTimestamp().isBefore(to))
                 .collect(Collectors.toList());

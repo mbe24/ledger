@@ -34,8 +34,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
 
     private final List<Transaction<M>> messagesBeforePushThreshold;
 
-
-    public IotaLedger(Builder<M, D> builder) {
+    private IotaLedger(Builder<M, D> builder) {
         LOGGER.entering(IotaLedger.class.getSimpleName(), "IotaLedger()");
 
         Iota api = builder.api;
@@ -80,7 +79,7 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
                 .setMessagesBeforePushThresholdConsumer(messagesBeforePushThreshold::addAll)
                 .setFormat(format)
                 .setKeepAliveInterval(Duration.ofMinutes(builder.keepFragmentsAliveMinutes))
-                .setDeserializer(builder.mapper)
+                .setDeserializer(builder.deserializer)
                 .build();
 
         long initialDelay = builder.pollDelayInterval / 2;
@@ -166,7 +165,8 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
 
         private Iota api;
         private MessageSender<M> sender;
-        private Mapper<M, D> mapper;
+        private Serializer<M, D> serializer;
+        private Deserializer<M, D> deserializer;
         private Format<D> format;
         private Map<String, TransactionListener<M>> listeners;
         private int pollDelayInterval = 5_000; // in ms
@@ -188,8 +188,13 @@ public class IotaLedger<M, D> implements Ledger<M, D> {
             return this;
         }
 
-        public Builder<M, D>  setMapper(Mapper<M, D> mapper) {
-            this.mapper = mapper;
+        public Builder<M, D>  setSerializer(Serializer<M, D> serializer) {
+            this.serializer = serializer;
+            return this;
+        }
+
+        public Builder<M, D>  setDeserializer(Deserializer<M, D> deserializer) {
+            this.deserializer = deserializer;
             return this;
         }
 

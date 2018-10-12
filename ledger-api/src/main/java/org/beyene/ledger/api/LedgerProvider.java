@@ -3,7 +3,7 @@ package org.beyene.ledger.api;
 import java.util.Map;
 
 /**
- * Service provider interface for Ledger
+ * <p>Service provider interface for Ledger</p>
  */
 public interface LedgerProvider {
 
@@ -36,7 +36,8 @@ public interface LedgerProvider {
      * <p>
      * </ul>
      *
-     * @param mapper
+     * @param serializer
+     * @param deserializer
      * @param format
      * @param listeners
      * @param properties
@@ -44,7 +45,8 @@ public interface LedgerProvider {
      * @param <D>        Data type in ledger, e.g. String or byte[]
      * @return
      */
-    <M, D> Ledger<M, D> newLedger(Mapper<M, D> mapper,
+    <M, D> Ledger<M, D> newLedger(Serializer<M, D> serializer,
+                                  Deserializer<M, D> deserializer,
                                   Format<D> format,
                                   Map<String, TransactionListener<M>> listeners,
                                   Map<String, Object> properties);

@@ -3,7 +3,6 @@ package org.beyene.ledger.iota;
 import jota.error.ArgumentException;
 import org.apache.commons.lang3.StringUtils;
 import org.beyene.ledger.api.Data;
-import org.beyene.ledger.api.Format;
 import org.beyene.ledger.api.Transaction;
 import org.beyene.ledger.iota.util.Iota;
 import org.junit.After;
@@ -25,12 +24,12 @@ import java.util.stream.Stream;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.Mockito.*;
 
-public class DefaultMessagerSenderTest {
+public class DefaultMessageSenderTest {
 
-    private List<String> transactionTrytes = new ArrayList<>();
+    private final List<String> transactionTrytes = new ArrayList<>();
     private Iota api;
     private MessageSender<String> sender;
-    private AtomicReference<Boolean> throwException = new AtomicReference<>(false);
+    private final AtomicReference<Boolean> throwException = new AtomicReference<>(false);
 
     @Before
     public void setUp() throws Exception {
@@ -44,7 +43,7 @@ public class DefaultMessagerSenderTest {
             return Collections.emptyList();
         }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class), isNull());
 
-        this.sender = new DefaultMessagerSender.Builder<String, String>()
+        this.sender = new DefaultMessageSender.Builder<String, String>()
                 .setApi(api)
                 .setFormat(Data.STRING)
                 .setSerializer(s -> s)
@@ -127,11 +126,11 @@ public class DefaultMessagerSenderTest {
 
     @Test(expected = IllegalStateException.class)
     public void testAddTransactionFormatError() throws Exception {
-        this.sender = new DefaultMessagerSender.Builder<String, Void>()
+        this.sender = new DefaultMessageSender.Builder<String, Void>()
                 .setApi(api)
                 // setting unsupported format leads to illegal state exception
                 .setFormat(() -> Void.class)
-                .setSerializer(s -> {return null;})
+                .setSerializer(s -> null)
                 .build();
         sender.addTransaction(new MessageTransaction<>("ID", Instant.now(), "TAG", "This is how we do"));
     }

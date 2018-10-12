@@ -28,11 +28,13 @@ public class IotaLedgerProvider implements LedgerProvider {
     private final NumberFormat nf = NumberFormat.getInstance();
 
     @Override
-    public <M, D> Ledger<M, D> newLedger(Mapper<M, D> mapper,
+    public <M, D> Ledger<M, D> newLedger(Serializer<M, D> serializer,
+                                         Deserializer<M, D> deserializer,
                                          Format<D> format,
                                          Map<String, TransactionListener<M>> listeners,
                                          Map<String, Object> properties) {
-        Objects.requireNonNull(mapper);
+        Objects.requireNonNull(serializer);
+        Objects.requireNonNull(deserializer);
         Objects.requireNonNull(format);
         Objects.requireNonNull(listeners);
         Objects.requireNonNull(properties);
@@ -62,10 +64,10 @@ public class IotaLedgerProvider implements LedgerProvider {
         setNumber(properties.get("ledger.receive.hash.cache"), Number::intValue, builder::setHashCacheSize);
         setNumber(properties.get("ledger.fragments.alive"), Number::intValue, builder::setKeepFragmentsAlive);
 
-        MessageSender<M> messageSender = new DefaultMessagerSender.Builder<M, D>()
+        MessageSender<M> messageSender = new DefaultMessageSender.Builder<M, D>()
                 .setApi(api)
                 .setFormat(format)
-                .setSerializer(mapper)
+                .setSerializer(serializer)
                 .setTipAnalysisDepth(3)
                 .setMinWeightMagnitude(13)
                 // TODO
@@ -78,7 +80,8 @@ public class IotaLedgerProvider implements LedgerProvider {
                 .setApi(api)
                 .setMessageSender(messageSender)
                 .setFormat(format)
-                .setMapper(mapper)
+                .setSerializer(serializer)
+                .setDeserializer(deserializer)
                 .setListeners(listeners)
                 .setListenerThreads(2)
                 .setPushThreshold(Instant.now())

@@ -40,7 +40,7 @@ public class TransactionPoller implements Runnable, TagChangeListener {
 
     private final Comparator<jota.model.Transaction> comparator;
 
-    public TransactionPoller(Builder builder) {
+    private TransactionPoller(Builder builder) {
         this.api = builder.api;
         this.queue = builder.queue;
 

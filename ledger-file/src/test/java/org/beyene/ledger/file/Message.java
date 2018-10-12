@@ -38,10 +38,7 @@ public class Message {
         if (!(o instanceof Message)) return false;
 
         Message message = (Message) o;
-
-        if (command != message.command) return false;
-        return request.equals(message.request);
-
+        return command == message.command && request.equals(message.request);
     }
 
     @Override

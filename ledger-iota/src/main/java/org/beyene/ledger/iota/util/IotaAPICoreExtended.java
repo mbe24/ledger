@@ -243,8 +243,8 @@ public class IotaAPICoreExtended implements IotaCore {
             String addressO = Checksum.removeChecksum(address);
             addressesWithoutChecksum.add(addressO);
         }
-        String[] tipsArray = tips != null ? tips.toArray(new String[]{}) : null;
-        return getBalances(threshold, addressesWithoutChecksum.toArray(new String[]{}), tipsArray);
+        String[] tipsArray = tips != null ? tips.toArray(new String[tips.size()]) : null;
+        return getBalances(threshold, addressesWithoutChecksum.toArray(new String[addressesWithoutChecksum.size()]), tipsArray);
     }
 
     /**

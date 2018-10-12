@@ -4,7 +4,7 @@ import jota.utils.TrytesConverter;
 import org.apache.commons.lang3.StringUtils;
 import org.beyene.ledger.api.Deserializer;
 import org.beyene.ledger.api.Format;
-import org.beyene.ledger.api.Mapper.MappingException;
+import org.beyene.ledger.api.error.MappingException;
 import org.beyene.ledger.api.Transaction;
 
 import javax.xml.bind.DatatypeConverter;
@@ -41,7 +41,7 @@ public class MessageParser<M, D> implements Runnable, TagChangeListener {
     // ConcurrentSkipListSet
     // could be used for tx handling OR map by bundle hash
 
-    public MessageParser(Builder<M, D> builder) {
+    private MessageParser(Builder<M, D> builder) {
         this.messageQueue = builder.messageQueue;
         this.transactionQueue = builder.transactionQueue;
         this.txsBeforePushThreshold = builder.txsBeforePushThreshold;
@@ -83,8 +83,8 @@ public class MessageParser<M, D> implements Runnable, TagChangeListener {
                 // to nothing -- old txs queue handles case
                 break;
             case REMOVE:
-                // remove tx with tags from 'in work' queue
-                // or leave them for clean up
+                // not necessary to remove txs with given tag from 'in work' queue,
+                // just leave them for clean up in dropOldFragments()
                 break;
         }
     }

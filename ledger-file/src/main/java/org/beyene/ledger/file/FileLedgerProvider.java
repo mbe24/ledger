@@ -16,11 +16,13 @@ public class FileLedgerProvider implements LedgerProvider {
     private static final Logger LOGGER = Logger.getLogger(FileLedgerProvider.class.getName());
 
     @Override
-    public <M, D> Ledger<M, D> newLedger(Mapper<M, D> mapper,
+    public <M, D> Ledger<M, D> newLedger(Serializer<M, D> serializer,
+                                         Deserializer<M, D> deserializer,
                                          Format<D> format,
                                          Map<String, TransactionListener<M>> listeners,
                                          Map<String, Object> properties) {
-        Objects.requireNonNull(mapper);
+        Objects.requireNonNull(serializer);
+        Objects.requireNonNull(deserializer);
         Objects.requireNonNull(format);
         Objects.requireNonNull(listeners);
         Objects.requireNonNull(properties);
@@ -36,6 +38,6 @@ public class FileLedgerProvider implements LedgerProvider {
             throw new IllegalStateException("file.directory could not be created: " + path, e);
         }
 
-        return new FileLedger<>(mapper, format, directory);
+        return new FileLedger<>(serializer, deserializer, format, directory);
     }
 }

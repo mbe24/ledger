@@ -25,14 +25,11 @@ import static org.mockito.Mockito.mock;
 
 public class MessageParserTest {
 
-    private List<String> transactionTrytes = new ArrayList<>();
+    private final List<String> transactionTrytes = new ArrayList<>();
     private MessageSender<String> sender;
 
     private BlockingQueue<Transaction<String>> messageQueue;
     private BlockingQueue<Transaction<jota.model.Transaction>> transactionQueue;
-    private BlockingQueue<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
-    private List<Transaction<String>> oldMessages;
-
     private MessageParser<String, String> messageParser;
 
     @Before
@@ -44,7 +41,7 @@ public class MessageParserTest {
             return Collections.emptyList();
         }).when(api).sendTrytes(any(String[].class), any(int.class), any(int.class), isNull());
 
-        this.sender = new DefaultMessagerSender.Builder<String, String>()
+        this.sender = new DefaultMessageSender.Builder<String, String>()
                 .setApi(api)
                 .setFormat(Data.STRING)
                 .setSerializer(s -> s)
@@ -55,8 +52,8 @@ public class MessageParserTest {
 
         this.messageQueue = new LinkedBlockingQueue<>();
         this.transactionQueue = new LinkedBlockingQueue<>();
-        this.txsBeforePushThreshold = new LinkedBlockingQueue<>();
-        this.oldMessages = new ArrayList<>();
+        BlockingQueue<Transaction<jota.model.Transaction>> txsBeforePushThreshold = new LinkedBlockingQueue<>();
+        List<Transaction<String>> oldMessages= new ArrayList<>();
 
         this.messageParser = new MessageParser.Builder<String, String>()
                 .setMessageQueue(messageQueue)

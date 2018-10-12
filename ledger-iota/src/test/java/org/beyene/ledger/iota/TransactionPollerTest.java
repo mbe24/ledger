@@ -43,17 +43,16 @@ public class TransactionPollerTest {
         // duplicate all txs
         DUPLICATE,
         // txs are provided in 'returnedTransactions'
-        PROVIDED;
+        PROVIDED
     }
 
     private static final int MULTI_SIZE = 5;
-    private List<jota.model.Transaction> returnedTransactions = new ArrayList<>();
+    private final List<jota.model.Transaction> returnedTransactions = new ArrayList<>();
 
     private EnumSet<ReturnOption> options = EnumSet.noneOf(ReturnOption.class);
-    private EnumSet<ReturnOption> timeOptions = EnumSet.of(OLD_TXS, NEW_TXS);
-    private EnumSet<ReturnOption> multiplicityOptions = EnumSet.of(SINGLE, MULTI);
+    private final EnumSet<ReturnOption> timeOptions = EnumSet.of(OLD_TXS, NEW_TXS);
+    private final EnumSet<ReturnOption> multiplicityOptions = EnumSet.of(SINGLE, MULTI);
 
-    private Iota api;
     private Set<String> tags;
     // contains new txs, i.e. txs that arrived after threshold time
     private BlockingQueue<Transaction<jota.model.Transaction>> queue;
@@ -62,26 +61,25 @@ public class TransactionPollerTest {
 
     // contains old tx, i.e. before threshold time (and not in sliding window)
     private List<Transaction<jota.model.Transaction>> txsBeforePushThreshold;
-    private Consumer<Collection<Transaction<jota.model.Transaction>>> oldTxsConsumer;
     private int hashCacheSize = 25;
 
     private TransactionPoller poller;
 
     @Before
     public void setUp() throws Exception {
-        this.api = mock(Iota.class);
+        Iota api = mock(Iota.class);
         doAnswer(invocation -> {
             Set<String> tags = Stream.of(invocation.<String[]>getArgument(0)).collect(Collectors.toSet());
             // fill txs dependent on state
             return provideTransactions(tags);
         }).when(api).findTransactionObjectsByTag(any(String[].class));
 
-        this.tags = new HashSet<>(Arrays.asList("A"));
+        this.tags = new HashSet<>(Collections.singletonList("A"));
         this.queue = new LinkedBlockingQueue<>();
         this.pushThreshold = Instant.now();
         this.slidingWindow = Duration.ofMinutes(5);
         this.txsBeforePushThreshold = new ArrayList<>();
-        this.oldTxsConsumer = txsBeforePushThreshold::addAll;
+        Consumer<Collection<Transaction<jota.model.Transaction>>> oldTxsConsumer = txsBeforePushThreshold::addAll;
 
         Map<String, Boolean> knownHashes = new LinkedHashMap<String, Boolean>() {
             private static final long serialVersionUID = 1L;

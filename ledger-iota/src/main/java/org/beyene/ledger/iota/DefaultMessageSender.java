@@ -19,9 +19,9 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class DefaultMessagerSender<M, D> implements MessageSender<M> {
+class DefaultMessageSender<M, D> implements MessageSender<M> {
 
-    private static final Logger LOGGER = Logger.getLogger(DefaultMessagerSender.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DefaultMessageSender.class.getName());
 
     private final Iota api;
     private final Format<D> format;
@@ -33,7 +33,7 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
     private final int depth;
     private final int minWeightMagnitude;
 
-    public DefaultMessagerSender(Builder<M, D> builder) {
+    private DefaultMessageSender(Builder<M, D> builder) {
         this.api = builder.api;
         this.format = builder.format;
         this.serializer = builder.serializer;
@@ -184,8 +184,8 @@ class DefaultMessagerSender<M, D> implements MessageSender<M> {
             return this;
         }
 
-        public DefaultMessagerSender<M, D> build() {
-            return new DefaultMessagerSender<>(this);
+        public DefaultMessageSender<M, D> build() {
+            return new DefaultMessageSender<>(this);
         }
     }
 }

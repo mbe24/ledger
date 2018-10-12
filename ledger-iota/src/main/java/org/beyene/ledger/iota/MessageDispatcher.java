@@ -17,9 +17,9 @@ public class MessageDispatcher<M> implements Runnable {
     private final BlockingQueue<Transaction<M>> queue;
     private final ConcurrentMap<String, TransactionListener<M>> listeners;
     private final boolean monitorContinuously;
-    private ExecutorService executorService;
+    private final ExecutorService executorService;
 
-    public MessageDispatcher(Builder<M> builder) {
+    private MessageDispatcher(Builder<M> builder) {
         this.queue = builder.queue;
         this.listeners = builder.listeners;
         this.monitorContinuously = builder.monitorContinuously;

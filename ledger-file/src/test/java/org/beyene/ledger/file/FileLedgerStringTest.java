@@ -1,10 +1,10 @@
 package org.beyene.ledger.file;
 
-import org.beyene.ledger.api.Data;
-import org.beyene.ledger.api.Ledger;
-import org.beyene.ledger.api.Mapper;
-import org.beyene.ledger.api.Transaction;
-import org.junit.*;
+import org.beyene.ledger.api.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -31,7 +31,7 @@ public class FileLedgerStringTest {
     private Ledger<Message, String> ledger;
     private Path txs;
 
-    private AtomicInteger folderIndex = new AtomicInteger(0);
+    private final AtomicInteger folderIndex = new AtomicInteger(0);
 
     @Before
     public void setUp() throws Exception {
@@ -44,8 +44,9 @@ public class FileLedgerStringTest {
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
         Unmarshaller unmarshaller = context.createUnmarshaller();
 
-        Mapper<Message, String> mapper = new MessageMapper(marshaller, unmarshaller);
-        ledger = new FileLedger<>(mapper, Data.STRING, txs);
+        Serializer<Message, String> serializer = new MessageSerializer(marshaller);
+        Deserializer<Message, String> deserializer = new MessageDeserializer(unmarshaller);
+        ledger = new FileLedger<>(serializer, deserializer, Data.STRING, txs);
     }
 
     @After
@@ -91,26 +92,33 @@ public class FileLedgerStringTest {
         Assert.assertThat(messages, hasItems(messageDisapprove));
     }
 
-    private static class MessageMapper implements Mapper<Message, String> {
+    private static class MessageDeserializer implements Deserializer<Message, String> {
 
-        private final Marshaller marshaller;
         private final Unmarshaller unmarshaller;
 
-        public MessageMapper(Marshaller marshaller, Unmarshaller unmarshaller) {
-            this.marshaller = marshaller;
+        public MessageDeserializer(Unmarshaller unmarshaller) {
             this.unmarshaller = unmarshaller;
         }
 
         @Override
         public Message deserialize(String s) {
             StringReader reader = new StringReader(s);
-            Message result = null;
+            Message result;
             try {
                 result = unmarshaller.unmarshal(new StreamSource(reader), Message.class).getValue();
             } catch (JAXBException e) {
                 throw new IllegalStateException(e);
             }
             return result;
+        }
+    }
+
+    private static class MessageSerializer implements Serializer<Message, String> {
+
+        private final Marshaller marshaller;
+
+        public MessageSerializer(Marshaller marshaller) {
+            this.marshaller = marshaller;
         }
 
         @Override
